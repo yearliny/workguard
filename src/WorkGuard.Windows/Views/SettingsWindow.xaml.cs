@@ -10,6 +10,7 @@ public partial class SettingsWindow : Window
         InitializeComponent();
         _app = app;
         var p = app.State.Preferences;
+        ValidationText.Text = app.DataError;
         EyeInterval.Text = p.EyeIntervalMinutes.ToString();
         MovementInterval.Text = p.MovementIntervalMinutes.ToString();
         NaturalRest.Text = p.NaturalRestMinutes.ToString();

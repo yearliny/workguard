@@ -23,12 +23,14 @@ internal static class SmokeTest
         if (string.IsNullOrEmpty(directory)) return;
         Directory.CreateDirectory(directory);
         var content = (FrameworkElement)window.Content;
-        var bitmap = new RenderTargetBitmap((int)Math.Ceiling(content.ActualWidth), (int)Math.Ceiling(content.ActualHeight), 96, 96, PixelFormats.Pbgra32);
+        var width = content.ActualWidth + content.Margin.Left + content.Margin.Right;
+        var height = content.ActualHeight + content.Margin.Top + content.Margin.Bottom;
+        var bitmap = new RenderTargetBitmap((int)Math.Ceiling(width), (int)Math.Ceiling(height), 96, 96, PixelFormats.Pbgra32);
         var visual = new DrawingVisual();
         using (var drawing = visual.RenderOpen())
         {
-            drawing.DrawRectangle(window.Background, null, new Rect(0, 0, content.ActualWidth, content.ActualHeight));
-            drawing.DrawRectangle(new VisualBrush(content) { Stretch = Stretch.Fill }, null, new Rect(0, 0, content.ActualWidth, content.ActualHeight));
+            drawing.DrawRectangle(window.Background, null, new Rect(0, 0, width, height));
+            drawing.DrawRectangle(new VisualBrush(content) { Stretch = Stretch.Fill }, null, new Rect(content.Margin.Left, content.Margin.Top, content.ActualWidth, content.ActualHeight));
         }
         bitmap.Render(visual);
         var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
@@ -79,7 +81,7 @@ internal static class SmokeTest
                 body.PauseForInterruption(); var count = body.Countdown.Text; body.Tick(TimeSpan.FromSeconds(5));
                 Check(body.Countdown.Text == count && !body.IsRunning, "Paused body activity advances"); Capture(body, "10-body-paused");
                 Click(body, "PauseButton"); for (var i = 0; i < 170; i++) body.Tick(TimeSpan.FromSeconds(1));
-                Check(completed == 1, "Full body activity not credited once"); Capture(body, "11-body-complete"); body.Close();
+                Check(completed == 1 && body.IsFinished && !body.IsRunning, "Full body activity not credited once"); Capture(body, "11-body-complete"); body.Close();
                 var skip = new BreakWindow(BreakKind.Movement, true, false, TimeSpan.Zero, false);
                 windows.Add(skip); skip.Show(); var skippedCredit = 0; skip.Completed += _ => skippedCredit++;
                 Click(skip, "StartButton"); for (var i = 0; i < 6; i++) Click(skip, "SkipButton");

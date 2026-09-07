@@ -96,7 +96,12 @@ public sealed class LocalStore(string directory)
             var restored = reader.Load();
             if (reader.ReadOnly) throw new IOException("备份也无法读取，原数据保持不变。");
             var temp = _path + ".restore.tmp";
-            File.WriteAllText(temp, text);
+            using (var stream = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                var bytes = System.Text.Encoding.UTF8.GetBytes(text);
+                stream.Write(bytes);
+                stream.Flush(flushToDisk: true);
+            }
             if (File.Exists(_path)) File.Replace(temp, _path, _path + ".preserved-" + Guid.NewGuid().ToString("N"));
             else File.Move(temp, _path);
             ReadOnly = false;

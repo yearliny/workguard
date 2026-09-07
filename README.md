@@ -36,7 +36,9 @@
 
 ## 如何运行
 
-目标平台：Windows 10 22H2 / Windows 11 x64。ARM64 可自行构建，尚未实际验收；Windows CI 也不替代这两个目标系统的人工验收。
+兼容目标：Windows 10 22H2 / Windows 11 x64。ARM64 可自行构建，尚未实际验收；Windows CI 也不替代这两个目标系统的人工验收。
+
+Windows 10 22H2 是本项目的兼容目标，并非 .NET 10 的官方受支持系统承诺；微软的支持矩阵按 Windows 生命周期区分版本，见 [官方系统列表](https://github.com/dotnet/core/blob/main/release-notes/10.0/supported-os.md)。
 
 安装 .NET 10 Desktop Runtime x64，完整解压 `WorkGuard-0.2.0-win-x64-lite.zip` 后运行 `WorkGuard.exe`。请保留目录中的所有文件。当前没有代码签名、安装器或自动更新。更新前先从托盘退出旧版本，再完整解压新版本；设置和统计会继续使用原数据目录。
 

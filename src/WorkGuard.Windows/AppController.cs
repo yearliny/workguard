@@ -72,6 +72,10 @@ internal sealed class AppController : IDisposable
             Engine.Advance(elapsed, new(TimeSpan.Zero, Unavailable: true));
             Status = "已锁屏或休眠";
         }
+        else if (_break is { IsFinished: true })
+        {
+            Status = "活动已完成 · 准备好后继续";
+        }
         else if (_break is { IsRunning: true })
         {
             if (elapsed > TimeSpan.FromSeconds(10)) _break.PauseForInterruption();

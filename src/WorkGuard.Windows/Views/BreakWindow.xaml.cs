@@ -11,6 +11,7 @@ public partial class BreakWindow : Window
     private bool _started;
     private bool _finishing;
     public bool HasStarted => _started;
+    public bool IsFinished => _session.Finished;
     public bool IsRunning => _started && !_session.Paused && !_session.Finished;
     public event Action<BreakSession>? Ended;
     public event Action<BreakSession>? Completed;
@@ -89,6 +90,7 @@ public partial class BreakWindow : Window
                 Close();
                 return;
             }
+            if (_session.FullyCompleted && _sound) System.Media.SystemSounds.Asterisk.Play();
             NextStep.Text = "";
             Heading.Text = _session.FullyCompleted ? "好了，带着轻松回来" : "这次就到这里";
             Instruction.Text = _session.FullyCompleted ? "活动流程已完成。准备好了，再继续工作。" : "你跳过了部分动作，这次不会记为完整活动。";
