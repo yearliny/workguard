@@ -1,15 +1,15 @@
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:ui="clr-namespace:WorkGuard.Windows.Views" x:Class="WorkGuard.Windows.Views.DashboardWindow" Style="{StaticResource AppWindow}" Title="工作防沉迷 · 今日" Width="1020" Height="760" MinWidth="820" MinHeight="600" WindowStartupLocation="CenterScreen">
-  <DockPanel Margin="32,24">
-    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,22">
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:ui="clr-namespace:WorkGuard.Windows.Views" x:Class="WorkGuard.Windows.Views.DashboardWindow" Style="{StaticResource AppWindow}" Title="工作防沉迷 · 今日" Width="1100" Height="800" MinWidth="820" MinHeight="600" WindowStartupLocation="CenterScreen">
+  <DockPanel Margin="32,24" ui:Motion.Enter="True">
+    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,16">
       <Button DockPanel.Dock="Right" Content="偏好设置" ui:Visuals.Glyph="&#xE713;" Click="Settings_Click"/>
       <DockPanel>
         <Border DockPanel.Dock="Left" Style="{StaticResource IconBadge}" Width="44" Height="44" Background="{StaticResource AccentBrush}" Margin="0,0,14,0"><ui:Symbol Text="&#xE916;" Foreground="White" FontSize="23"/></Border>
         <StackPanel><TextBlock Text="工作防沉迷" FontSize="24" FontWeight="SemiBold"/>
-        <TextBlock Text="专注工作，也给身体留一点时间。" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,0"/>
+        <TextBlock Text="把专注留给工作，把余地留给自己。" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,0"/>
         </StackPanel>
       </DockPanel>
     </DockPanel>
-    <TextBlock DockPanel.Dock="Bottom" Text="关闭窗口后，提醒继续在系统托盘运行 · 数据只保存在本机" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,16,0,0"/>
+    <TextBlock DockPanel.Dock="Bottom" Text="关闭窗口后，提醒继续在系统托盘运行 · 数据只保存在本机" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,12,0,0"/>
     <Border x:Name="ErrorBanner" DockPanel.Dock="Top" Background="#FCEAE4" CornerRadius="10" Padding="14" Margin="0,0,0,16" Visibility="Collapsed">
       <DockPanel>
         <Button x:Name="RestoreButton" DockPanel.Dock="Right" Content="恢复备份" ui:Visuals.Glyph="&#xE72C;" Click="Restore_Click"/>
@@ -19,65 +19,63 @@
     <TabControl x:Name="Sections" Background="Transparent" BorderThickness="0">
       <TabItem Header="今天" ui:Visuals.Glyph="&#xE80F;">
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-          <StackPanel Margin="0,20,12,0">
-            <Border Background="#E5ECE3" CornerRadius="20" Padding="20">
+          <StackPanel Margin="0,18,12,0" ui:Motion.Enter="True">
+            <Border CornerRadius="24" Background="#E8EDE3" Padding="22" MinHeight="224">
               <Grid>
-                <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="*"/>
-                  <ColumnDefinition Width="170"/><ColumnDefinition Width="236"/>
-                </Grid.ColumnDefinitions>
-                <StackPanel>
-                  <TextBlock x:Name="StatusText" Foreground="{StaticResource MutedBrush}"/>
-                  <StackPanel Orientation="Horizontal" Margin="0,8">
-                    <TextBlock x:Name="ContinuousText" FontSize="52" FontWeight="Light"/>
-                    <TextBlock Text="分钟 · 本轮估计" VerticalAlignment="Bottom" Margin="12,0,0,14"/>
-                  </StackPanel>
-                  <TextBlock x:Name="NextText" Margin="0,12,0,0"/>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="210"/><ColumnDefinition x:Name="HeroImageColumn" Width="240"/></Grid.ColumnDefinitions>
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock x:Name="GreetingText" Text="认真工作，也认真休息。" FontSize="25" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                  <Border Background="#F4F6F0" CornerRadius="12" Padding="10,5" HorizontalAlignment="Left"><TextBlock x:Name="StatusText" Foreground="{StaticResource MutedBrush}" FontSize="12"/></Border>
+                  <TextBlock x:Name="NextText" FontSize="15" Margin="0,16,0,12"/>
+                  <Button Content="现在活动 3 分钟" Style="{StaticResource PrimaryButton}" ui:Visuals.Glyph="&#xE768;" Click="Movement_Click" HorizontalAlignment="Left"/>
+                  <TextBlock x:Name="TimingHint" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,8,0,0"/>
                 </StackPanel>
-                <Image x:Name="HeroArt" Grid.Column="1" Source="{StaticResource WorkdayArt}" Width="164" Height="160" Stretch="Uniform" IsHitTestVisible="False"/>
-                <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                  <Button Content="现在活动 3 分钟" Style="{StaticResource PrimaryButton}" ui:Visuals.Glyph="&#xE768;" Click="Movement_Click"/>
-                  <Button x:Name="PauseButton" ui:Visuals.Glyph="&#xE769;" Click="Pause_Click"/>
-                  <TextBlock x:Name="TimingHint" Foreground="{StaticResource MutedBrush}" FontSize="12" TextAlignment="Center" Margin="0,8,10,0"/>
-                </StackPanel>
+                <Grid Grid.Column="1" Width="184" Height="184" VerticalAlignment="Center">
+                  <ui:ProgressRing x:Name="WorkRing" Stroke="{StaticResource AccentBrush}"/>
+                  <StackPanel VerticalAlignment="Center"><TextBlock Text="本轮连续" FontSize="12" TextAlignment="Center" Foreground="{StaticResource MutedBrush}"/><TextBlock x:Name="ContinuousText" FontSize="54" FontWeight="Light" TextAlignment="Center"/><TextBlock Text="分钟 · 估计" FontSize="12" TextAlignment="Center" Foreground="{StaticResource MutedBrush}"/></StackPanel>
+                </Grid>
+                <Border x:Name="HeroImagePanel" Grid.Column="2" CornerRadius="20" Margin="16,0,0,0">
+                  <ui:SceneImage x:Name="HeroArt" Source="{StaticResource SanctuaryArt}" CornerRadius="20"/>
+                </Border>
               </Grid>
             </Border>
-            <TextBlock Text="今天的节奏" FontSize="20" FontWeight="SemiBold" Margin="0,14,0,10"/>
+            <DockPanel Margin="0,12,0,8"><Button x:Name="PauseButton" DockPanel.Dock="Right" ui:Visuals.Glyph="&#xE769;" Click="Pause_Click" Padding="12,6" MinHeight="32" FontSize="12" Background="Transparent"/><TextBlock Text="今天的节奏" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"/></DockPanel>
             <UniformGrid Columns="3">
-              <Border Style="{StaticResource Card}" Padding="18" Margin="0,0,12,0">
+              <Border Style="{StaticResource Card}" Padding="16" Margin="0,0,12,0">
                 <StackPanel>
                   <DockPanel><Border DockPanel.Dock="Right" Width="28" Height="28" CornerRadius="9" Background="#E7EFEB"><ui:Symbol Text="&#xE7F4;" FontSize="15" Foreground="{StaticResource AccentBrush}"/></Border><TextBlock Text="电脑活动估计" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/></DockPanel>
-                  <TextBlock x:Name="ActiveText" FontSize="26" Margin="0,10,0,0"/>
+                  <TextBlock x:Name="ActiveText" FontSize="25" Margin="0,8,0,0"/>
                 </StackPanel>
               </Border>
-              <Border Style="{StaticResource Card}" Padding="18" Margin="0,0,12,0">
+              <Border Style="{StaticResource Card}" Padding="16" Margin="0,0,12,0">
                 <StackPanel>
                   <DockPanel><Border DockPanel.Dock="Right" Width="28" Height="28" CornerRadius="9" Background="#F5EADD"><ui:Symbol Text="&#xE916;" FontSize="15" Foreground="{StaticResource AccentBrush}"/></Border><TextBlock Text="最长连续工作" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/></DockPanel>
-                  <TextBlock x:Name="LongestText" FontSize="26" Margin="0,10,0,0"/>
+                  <TextBlock x:Name="LongestText" FontSize="25" Margin="0,8,0,0"/>
                 </StackPanel>
               </Border>
               <Border Style="{StaticResource Card}" Padding="16">
                 <StackPanel>
                   <DockPanel><Border DockPanel.Dock="Right" Width="28" Height="28" CornerRadius="9" Background="#E9EEF5"><ui:Symbol Text="&#xE8FB;" FontSize="15" Foreground="{StaticResource AccentBrush}"/></Border><TextBlock Text="完成身体活动" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/></DockPanel>
-                  <TextBlock x:Name="BreaksText" FontSize="26" Margin="0,10,0,0"/>
+                  <TextBlock x:Name="BreaksText" FontSize="25" Margin="0,8,0,0"/>
                 </StackPanel>
               </Border>
             </UniformGrid>
             <TextBlock x:Name="EyeText" Foreground="{StaticResource MutedBrush}" Margin="0,10,0,12"/>
             <UniformGrid Columns="2">
               <Button x:Name="EyesAction" Style="{StaticResource ActivityCard}" Click="Eyes_Click" AutomationProperties.Name="远眺 20 秒" Margin="0,0,12,0">
-                <StackPanel Orientation="Horizontal"><Border Style="{StaticResource IconBadge}" Background="#E9EEF5" Margin="0,0,14,0"><ui:Symbol Text="&#xE890;" Foreground="#537481"/></Border><StackPanel><TextBlock Text="让目光走远一点" FontWeight="SemiBold"/><TextBlock Text="远眺 20 秒" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"/></StackPanel></StackPanel>
+                <StackPanel Orientation="Horizontal"><Border Style="{StaticResource IconBadge}" Background="#E9EEF5" Margin="0,0,14,0"><ui:Symbol Text="&#xE890;" Foreground="#537481"/></Border><StackPanel><TextBlock Text="让目光走远一点" FontWeight="SemiBold" LineHeight="22"/><TextBlock Text="远眺 20 秒" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"/></StackPanel></StackPanel>
               </Button>
               <Button x:Name="OfficeAction" Style="{StaticResource ActivityCard}" Click="Office_Click" AutomationProperties.Name="办公室活动 7 分钟" Margin="0">
-                <StackPanel Orientation="Horizontal"><Border Style="{StaticResource IconBadge}" Background="#F6E7D9" Margin="0,0,14,0"><ui:Symbol Text="&#xE916;" Foreground="#A57348"/></Border><StackPanel><TextBlock Text="给身体充个电" FontWeight="SemiBold"/><TextBlock Text="办公室活动 7 分钟" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"/></StackPanel></StackPanel>
+                <StackPanel Orientation="Horizontal"><Border Style="{StaticResource IconBadge}" Background="#F6E7D9" Margin="0,0,14,0"><ui:Symbol Text="&#xE916;" Foreground="#A57348"/></Border><StackPanel><TextBlock Text="给身体充个电" FontWeight="SemiBold" LineHeight="22"/><TextBlock Text="办公室活动 7 分钟" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"/></StackPanel></StackPanel>
               </Button>
             </UniformGrid>
           </StackPanel>
         </ScrollViewer>
       </TabItem>
       <TabItem Header="最近 7 天" ui:Visuals.Glyph="&#xE787;">
-        <Grid Margin="0,20,0,0">
+        <Grid Margin="0,20,0,0" ui:Motion.Enter="True">
           <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
@@ -89,7 +87,15 @@
               <TextBlock Text="每天的连续工作与休息记录，按本地日期统计。" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0"/>
             </StackPanel>
           </DockPanel>
-          <DataGrid x:Name="WeekGrid" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False" CanUserResizeRows="False" HeadersVisibility="Column" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="{StaticResource BorderBrush}" BorderThickness="0" Background="White" RowHeight="48" ColumnHeaderHeight="44" MinColumnWidth="140" HorizontalScrollBarVisibility="Disabled" SelectionMode="Single">
+          <Border Grid.Row="1" Style="{StaticResource Card}" Padding="18,12" Margin="0,0,0,12">
+            <StackPanel><TextBlock Text="每天最长的一段连续工作" FontSize="13" Foreground="{StaticResource MutedBrush}"/>
+              <ItemsControl x:Name="WeekBars" Height="100" Margin="0,10,0,0" AutomationProperties.Name="最近七天最长连续工作，分钟">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="7"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate><DataTemplate><Grid ToolTip="{Binding Description}"><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Center"><TextBlock Text="{Binding Label}" FontSize="11" TextAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4"/><Border Width="28" Height="{Binding Height}" Background="#91AF9C" CornerRadius="5,5,0,0"/></StackPanel><TextBlock Grid.Row="1" Text="{Binding Date}" FontSize="11" TextAlignment="Center" Margin="0,6,0,0"/></Grid></DataTemplate></ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
+          <DataGrid x:Name="WeekGrid" Grid.Row="2" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False" CanUserResizeRows="False" HeadersVisibility="Column" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="{StaticResource BorderBrush}" BorderThickness="0" Background="White" RowHeight="48" ColumnHeaderHeight="44" MinColumnWidth="140" HorizontalScrollBarVisibility="Disabled" SelectionMode="Single">
             <DataGrid.Columns>
               <DataGridTextColumn Header="日期" Binding="{Binding Date}" Width="*"/>
               <DataGridTextColumn Header="电脑活动" Binding="{Binding Active}" Width="*"/>
@@ -97,7 +103,7 @@
               <DataGridTextColumn Header="身体 / 眼睛休息" Binding="{Binding Breaks}" Width="1.3*"/>
             </DataGrid.Columns>
           </DataGrid>
-          <TextBlock Grid.Row="2" Text="仅保存最近 90 天。休息次数表示计时流程完成，不代表验证了身体动作。" Foreground="{StaticResource MutedBrush}" Margin="0,16,0,0"/>
+          <TextBlock Grid.Row="3" Text="仅保存最近 90 天。休息次数表示计时流程完成，不代表验证了身体动作。" Foreground="{StaticResource MutedBrush}" Margin="0,16,0,0"/>
         </Grid>
       </TabItem>
     </TabControl>

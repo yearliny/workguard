@@ -4,6 +4,12 @@ using WorkGuard.Data;
 // Dependency-free deterministic behavior checks. Nonzero exit code fails CI.
 var tests = new (string Name, Action Run)[]
 {
+    ("Reduce motion preference persists and defaults to normal", () => WithDirectory(path =>
+    {
+        var store = new LocalStore(path); var state = store.Load(); True(!state.Preferences.ReduceMotion);
+        state.Preferences = state.Preferences with { ReduceMotion = true }; store.Save(state);
+        True(new LocalStore(path).Load().Preferences.ReduceMotion);
+    })),
     ("Strict scope is opt-in and never forces office training", () =>
     {
         var p = new Preferences(); True(!p.ShouldForce(BreakKind.Movement));

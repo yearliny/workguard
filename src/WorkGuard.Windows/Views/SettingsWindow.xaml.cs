@@ -23,6 +23,7 @@ public partial class SettingsWindow : Window
         Startup.IsChecked = p.StartWithWindows;
         Gentle.IsChecked = p.GentleOnly;
         Sound.IsChecked = p.SoundEnabled;
+        ReducedMotion.IsChecked = p.ReduceMotion;
         QuietEnabled.IsChecked = p.QuietHoursEnabled;
         QuietStart.Text = TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(p.QuietStartMinute)).ToString("HH:mm");
         QuietEnd.Text = TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(p.QuietEndMinute)).ToString("HH:mm");
@@ -48,6 +49,7 @@ public partial class SettingsWindow : Window
             EyeIntervalMinutes = eye, MovementIntervalMinutes = movement, NaturalRestMinutes = rest,
             EyeReminders = EyeEnabled.IsChecked == true, InferNaturalRest = InferRest.IsChecked == true,
             QuietWhenFullscreen = QuietFullscreen.IsChecked == true, StartWithWindows = Startup.IsChecked == true,
+            ReduceMotion = ReducedMotion.IsChecked == true,
             GentleOnly = Gentle.IsChecked == true, SoundEnabled = Sound.IsChecked == true,
             QuietHoursEnabled = QuietEnabled.IsChecked == true, QuietStartMinute = start.Hour * 60 + start.Minute,
             QuietEndMinute = end.Hour * 60 + end.Minute

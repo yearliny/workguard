@@ -10,6 +10,12 @@ public partial class DashboardWindow : Window
     {
         InitializeComponent();
         _app = app;
+        SizeChanged += (_, _) =>
+        {
+            var wide = ActualWidth >= 980;
+            HeroImagePanel.Visibility = wide ? Visibility.Visible : Visibility.Collapsed;
+            HeroImageColumn.Width = new GridLength(wide ? 240 : 0);
+        };
         _app.Changed += Refresh;
         Closed += (_, _) => _app.Changed -= Refresh;
         Refresh();
@@ -18,7 +24,9 @@ public partial class DashboardWindow : Window
     private void Refresh()
     {
         var today = LocalStore.Day(_app.State, DateOnly.FromDateTime(DateTime.Now));
-        StatusText.Text = _app.Status;
+        StatusText.Text = (_app.State.Preferences.StrictMode ? "强制模式 · " : "温和模式 · ") + _app.Status;
+        GreetingText.Text = DateTime.Now.Hour switch { < 11 => "新的一天，从容开始。", < 17 => "忙碌之间，留一点空隙。", _ => "辛苦了，也照顾好自己。" };
+        WorkRing.Value = _app.Engine.Continuous.TotalMinutes / _app.State.Preferences.MovementIntervalMinutes;
         ErrorBanner.Visibility = _app.DataError is null ? Visibility.Collapsed : Visibility.Visible;
         ErrorText.Text = _app.DataError;
         RestoreButton.IsEnabled = _app.CanRestoreBackup;
@@ -35,6 +43,18 @@ public partial class DashboardWindow : Window
         Visuals.SetGlyph(PauseButton, _app.Paused ? "\uE768" : "\uE769");
         if ((DateTime.Now - _lastWeekRefresh).Duration() < TimeSpan.FromSeconds(10)) return;
         _lastWeekRefresh = DateTime.Now;
+        var chartDays = Enumerable.Range(0, 7).Select(i =>
+        {
+            var date = today.Date.AddDays(i - 6);
+            return (date, day: _app.State.Days.FirstOrDefault(d => d.Date == date));
+        }).ToArray();
+        var max = Math.Max(1, chartDays.Max(x => x.day?.LongestSeconds ?? 0));
+        WeekBars.ItemsSource = chartDays.Select(x => new
+        {
+            Date = x.date.ToString("MM-dd"), Label = x.day is null ? "—" : ((int)(x.day.LongestSeconds / 60)).ToString(),
+            Height = (x.day?.LongestSeconds ?? 0) / max * 60,
+            Description = x.day is null ? $"{x.date:MM-dd}：暂无记录" : $"{x.date:MM-dd}：最长连续工作 {(int)(x.day.LongestSeconds / 60)} 分钟"
+        });
         WeekGrid.ItemsSource = Enumerable.Range(0, 7).Select(i =>
         {
             var date = today.Date.AddDays(-i);
