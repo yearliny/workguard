@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/WorkGuard.Core/WorkGuard.Core.csproj" />
+    <Project Path="src/WorkGuard.Data/WorkGuard.Data.csproj" />
+    <Project Path="src/WorkGuard.Windows/WorkGuard.Windows.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/WorkGuard.Tests/WorkGuard.Tests.csproj" />
+  </Folder>
+</Solution>

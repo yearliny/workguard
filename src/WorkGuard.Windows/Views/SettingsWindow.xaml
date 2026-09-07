@@ -1,0 +1,38 @@
+<Window x:Class="WorkGuard.Windows.Views.SettingsWindow"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ Title="工作防沉迷 · 设置" Width="660" Height="790" MinWidth="550" MinHeight="460" WindowStartupLocation="CenterScreen">
+ <DockPanel Margin="30">
+  <WrapPanel DockPanel.Dock="Bottom" Margin="0,14,0,0"><Button Content="保存并开始" Style="{StaticResource PrimaryButton}" Click="Save_Click"/><Button Content="打开数据文件夹" Click="Data_Click"/></WrapPanel>
+  <ScrollViewer VerticalScrollBarVisibility="Auto">
+   <StackPanel Margin="0,0,14,0">
+    <TextBlock Text="让休息，适合你的节奏" FontSize="26" FontWeight="SemiBold"/>
+    <TextBlock Text="先从轻松活动开始。休息窗口可以随时退出；关闭设置后，程序在系统托盘运行。" Foreground="{StaticResource MutedBrush}" Margin="0,12,0,24"/>
+    <TextBlock Text="提醒节奏" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12"/>
+    <Grid>
+     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="100"/></Grid.ColumnDefinitions>
+     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+     <TextBlock Text="眼睛休息间隔（10–60 分钟）" VerticalAlignment="Center"/><TextBox x:Name="EyeInterval" Grid.Column="1" AutomationProperties.Name="眼睛休息间隔，分钟" Margin="0,4"/>
+     <TextBlock Text="身体活动间隔（30–120 分钟）" Grid.Row="1" VerticalAlignment="Center"/><TextBox x:Name="MovementInterval" Grid.Row="1" Grid.Column="1" AutomationProperties.Name="身体活动间隔，分钟" Margin="0,4"/>
+     <TextBlock Text="推测自然休息阈值（3–15 分钟）" Grid.Row="2" VerticalAlignment="Center"/><TextBox x:Name="NaturalRest" Grid.Row="2" Grid.Column="1" AutomationProperties.Name="自然休息阈值，分钟" Margin="0,4"/>
+    </Grid>
+    <CheckBox x:Name="EyeEnabled" Content="开启眼睛休息提醒"/>
+    <CheckBox x:Name="InferRest" Content="长时间没有键鼠输入时，推测已自然休息"/>
+    <TextBlock Text="键鼠空闲不等于离开屏幕。经常阅读、看视频时可关闭此项；会议模式始终继续累计用屏时间。只读取输入时间，不记录按键或屏幕内容。" Foreground="{StaticResource MutedBrush}"/>
+    <CheckBox x:Name="QuietFullscreen" Content="其他应用全屏时，只静默计时"/>
+    <TextBlock Text="视频会议请在托盘中手动开启会议模式。当前版本不自动判断你是否正在通话。" Foreground="{StaticResource MutedBrush}"/>
+    <CheckBox x:Name="Startup" Content="登录 Windows 时启动"/>
+    <TextBlock Text="活动方式" FontSize="18" FontWeight="SemiBold" Margin="0,20,0,0"/>
+    <CheckBox x:Name="Gentle" Content="仅轻柔活动（不包含坐站、墙壁俯卧撑和提踵）"/>
+    <TextBlock Text="所有方案都不跳跃、不做地面动作。不勾选时会加入基础力量动作。软件不根据症状诊断或开具康复方案。" Foreground="{StaticResource MutedBrush}"/>
+    <Border Background="#EAEDE4" Padding="18" CornerRadius="12" Margin="0,20,0,0"><StackPanel>
+     <TextBlock Text="以舒适为界限" FontWeight="SemiBold" Margin="0,0,0,8"/>
+     <TextBlock Text="动作不应引起疼痛。出现疼痛、麻木、头晕等不适时，停止活动。已有颈腰椎或其他疾病、近期手术或受伤时，请遵循医生或康复师建议。"/>
+    </StackPanel></Border>
+    <TextBlock Text="关于与隐私" FontSize="18" FontWeight="SemiBold" Margin="0,24,0,10"/>
+    <TextBlock Text="WorkGuard 0.1.0 · 无账户、无广告、无遥测。设置与最近 90 天的统计保存在本机。计时完成不代表已验证动作或获得医疗效果。" Foreground="{StaticResource MutedBrush}"/>
+    <TextBlock x:Name="ValidationText" Foreground="#9B382E" Margin="0,16,0,0" AutomationProperties.LiveSetting="Polite"/>
+   </StackPanel>
+  </ScrollViewer>
+ </DockPanel>
+</Window>
