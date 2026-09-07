@@ -19,6 +19,11 @@ internal static class WindowPlacement
         var top = corner ? Math.Max(bounds.Top, bounds.Bottom - height - 16) : bounds.Top + (bounds.Height - height) / 2;
         SetWindowPos(handle, new IntPtr(-1), left, top, width, height, 0x0010);
     }
+    public static void PlaceOnScreen(Window window, Forms.Screen screen)
+    {
+        var b = screen.Bounds;
+        SetWindowPos(new WindowInteropHelper(window).Handle, new IntPtr(-1), b.Left, b.Top, b.Width, b.Height, 0x0010);
+    }
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int width, int height, uint flags);

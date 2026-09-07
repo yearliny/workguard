@@ -36,6 +36,7 @@ internal sealed class AppController : IDisposable
     private SettingsWindow? _settings;
     private BreakWindow? _break;
     private ReminderWindow? _reminder;
+    private int _eyeVariant, _bodyVariant;
 
     public AppController(string? dataDirectory = null)
     {
@@ -100,7 +101,11 @@ internal sealed class AppController : IDisposable
             if (result == Reminder.MovementSoon)
                 _tray?.Notify("稍后，给身体一点时间", "还有约 10 分钟就到活动时间。可以先完成手头这一小段。");
             else if (result is Reminder.Movement or Reminder.Eyes)
-                ShowReminder(result == Reminder.Eyes ? BreakKind.Eyes : BreakKind.Movement);
+            {
+                var kind = result == Reminder.Eyes ? BreakKind.Eyes : BreakKind.Movement;
+                if (State.Preferences.ShouldForce(kind)) StartBreak(kind, automatic: true, strict: true);
+                else ShowReminder(kind);
+            }
         }
         Statistics.Record(State, Engine.TotalActive - before, DateTimeOffset.Now, Engine.Continuous);
         if (now - _lastSave >= TimeSpan.FromSeconds(30)) { Save(); _lastSave = now; }
@@ -124,20 +129,21 @@ internal sealed class AppController : IDisposable
 
     private void DismissReminder() => _reminder?.Close();
 
-    public void StartBreak(BreakKind kind, bool automatic = false, bool beginImmediately = false)
+    public void StartBreak(BreakKind kind, bool automatic = false, bool beginImmediately = false, bool strict = false)
     {
         if (_locked || _sleeping) return;
         DismissReminder();
         if (_break is not null) { if (!automatic) _break.Activate(); return; }
-        _break = new BreakWindow(kind, State.Preferences.GentleOnly, automatic, Engine.Continuous, State.Preferences.SoundEnabled);
+        _break = new BreakWindow(kind, State.Preferences.GentleOnly, automatic, Engine.Continuous, State.Preferences.SoundEnabled, strict, kind == BreakKind.Eyes ? _eyeVariant++ : _bodyVariant++, State.Preferences.NeckMovements);
         _break.Completed += session =>
         {
-            if (session.FullyCompleted && Engine.Complete(session.Kind, session.Observed))
+            if (session.FullyCompleted && Engine.Complete(session.RestOnly ? BreakKind.Eyes : session.Kind, session.Observed))
             {
                 var day = LocalStore.Day(State, DateOnly.FromDateTime(DateTime.Now));
-                if (session.Kind == BreakKind.Eyes) day.EyeBreaks++;
+                if (session.Kind == BreakKind.Eyes || session.RestOnly) day.EyeBreaks++;
                 else if (session.Kind == BreakKind.Movement) day.MovementBreaks++;
                 else day.OfficeBreaks++;
+                if (session.RestOnly) Engine.Snooze(TimeSpan.FromMinutes(5));
                 Save();
             }
         };
@@ -148,8 +154,10 @@ internal sealed class AppController : IDisposable
             _lastTick = _clock.Elapsed;
             Changed?.Invoke();
         };
-        _break.Show();
-        if (beginImmediately) _break.BeginSession();
+        var window = _break;
+        _lastTick = _clock.Elapsed;
+        window.Show();
+        if (beginImmediately) window.BeginSession();
     }
 
     public void ShowDashboard()
@@ -221,6 +229,8 @@ internal sealed class AppController : IDisposable
         { Diagnostics.Record(error); MessageBox.Show("无法导出，请选择可写入的位置。", "工作防沉迷"); }
     }
 
+    public void EndBreakForSystem() => _break?.CloseForSystem();
+
     public void TogglePause() { _pauseUntil = Paused ? TimeSpan.Zero : _clock.Elapsed + TimeSpan.FromHours(1); if (Paused) DismissReminder(); Changed?.Invoke(); }
 
     private void SessionSwitch(object sender, SessionSwitchEventArgs e) => OnUi(() =>
@@ -256,7 +266,7 @@ internal sealed class AppController : IDisposable
         _lastTick = _clock.Elapsed;
     }
 
-    private void DisplayChanged(object? sender, EventArgs e) => OnUi(() => { DismissReminder(); _break?.Close(); });
+    private void DisplayChanged(object? sender, EventArgs e) => OnUi(() => { DismissReminder(); _break?.CloseForSystem(); });
     private void OnUi(Action action) { if (!_disposed) Application.Current.Dispatcher.BeginInvoke(new Action(() => { if (!_disposed) action(); })); }
 
     public void Save()

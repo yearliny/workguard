@@ -5,6 +5,11 @@ public sealed record Preferences
     public int EyeIntervalMinutes { get; init; } = 20;
     public int MovementIntervalMinutes { get; init; } = 60;
     public int NaturalRestMinutes { get; init; } = 5;
+    public bool StrictMode { get; init; }
+    public bool StrictEyes { get; init; } = true;
+    public bool NeckMovements { get; init; }
+    public bool ShouldForce(BreakKind kind) => StrictMode &&
+        (kind == BreakKind.Movement || kind == BreakKind.Eyes && StrictEyes && EyeReminders);
     public bool EyeReminders { get; init; } = true;
     public bool InferNaturalRest { get; init; } = true;
     public bool QuietWhenFullscreen { get; init; } = true;

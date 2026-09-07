@@ -43,7 +43,7 @@ internal sealed class TrayIcon : IDisposable
         _menu.Items.Add(_pause);
         _menu.Items.Add("设置", null, (_, _) => app.ShowSettings());
         _menu.Items.Add(new Forms.ToolStripSeparator());
-        _menu.Items.Add("退出", null, (_, _) => Application.Current.Shutdown());
+        _menu.Items.Add("退出", null, (_, _) => { app.EndBreakForSystem(); Application.Current.Shutdown(); });
         _icon = new Forms.NotifyIcon { Icon = _drawingIcon, Text = "工作防沉迷", ContextMenuStrip = _menu, Visible = true };
         _icon.DoubleClick += (_, _) => app.ShowDashboard();
         _icon.BalloonTipClicked += (_, _) => app.ShowDashboard();

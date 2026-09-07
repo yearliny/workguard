@@ -22,6 +22,7 @@ public partial class App : Application
             Diagnostics.Record(error.Exception);
             error.Handled = true;
             MessageBox.Show("程序遇到了意外错误，即将退出。已保存的数据会保留；本地诊断日志可帮助排查。", "工作防沉迷");
+            _controller?.EndBreakForSystem();
             Shutdown(1);
         };
         AppDomain.CurrentDomain.UnhandledException += (_, error) =>
@@ -40,7 +41,7 @@ public partial class App : Application
             {
                 if (!_exiting) Dispatcher.BeginInvoke(new Action(() => { if (!_exiting) _controller?.ShowDashboard(); }));
             }, null, Timeout.Infinite, false);
-            SessionEnding += (_, _) => _controller?.Save();
+            SessionEnding += (_, _) => { _controller?.EndBreakForSystem(); _controller?.Save(); };
             _controller.Start();
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)

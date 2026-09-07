@@ -18,3 +18,11 @@
 - [Mayo Clinic：办公室人体工学](https://www.mayoclinic.org/healthy-lifestyle/adult-health/in-depth/office-ergonomics/art-20046169)：工位调整以及站起、活动、改变姿势的一般建议。
 
 20 / 60 分钟间隔及具体 3 / 7 分钟动作编排是可调整的产品设计，不宣称这些组织认可了此完整方案。公开发布前应安排专业内容审阅和不同身体条件用户的试用反馈。
+
+## 0.4.0 强制模式的内容边界
+
+“强制”指休息时间内的应用交互，不要求用户忍痛做动作。随时可改为安静休息或确认紧急退出。安静休息不计为身体活动，软件无法观察动作是否实际完成。
+
+新增的缓慢左右转头默认关闭，只到舒适范围，排除绕颈、手压头及追求大幅度。有颈部疾病、近期受伤、术后限制或活动不适时不应据此自行开展康复训练。
+
+参考 [NHS inform：颈部活动说明](https://www.nhsinform.scot/illnesses-and-conditions/muscle-bone-and-joints/neck-and-back-problems-and-conditions/exercises-for-neck-problems)：采用舒适范围内缓慢转头的原则；30 秒是本产品编排，不是该来源对所有人的处方。远眺仍依据上述 Mayo Clinic 的 20-20-20 提示。新增内容需专业审阅，不宣称治疗颈椎疾病。
