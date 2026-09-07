@@ -16,13 +16,21 @@ internal static class SmokeTest
         ((Button)window.FindName(name)).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
     private static void Capture(Window window, string name)
     {
+        // DataGrid star widths and tab templates settle on the dispatcher after Loaded.
+        window.Dispatcher.Invoke(() => { }, DispatcherPriority.ContextIdle);
         window.UpdateLayout();
         var directory = Environment.GetEnvironmentVariable("WORKGUARD_CAPTURE_DIR");
         if (string.IsNullOrEmpty(directory)) return;
         Directory.CreateDirectory(directory);
         var content = (FrameworkElement)window.Content;
         var bitmap = new RenderTargetBitmap((int)Math.Ceiling(content.ActualWidth), (int)Math.Ceiling(content.ActualHeight), 96, 96, PixelFormats.Pbgra32);
-        bitmap.Render(content);
+        var visual = new DrawingVisual();
+        using (var drawing = visual.RenderOpen())
+        {
+            drawing.DrawRectangle(window.Background, null, new Rect(0, 0, content.ActualWidth, content.ActualHeight));
+            drawing.DrawRectangle(new VisualBrush(content) { Stretch = Stretch.Fill }, null, new Rect(0, 0, content.ActualWidth, content.ActualHeight));
+        }
+        bitmap.Render(visual);
         var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
         using var file = File.Create(Path.Combine(directory, name + ".png")); encoder.Save(file);
     }

@@ -1,6 +1,6 @@
 <Window x:Class="WorkGuard.Windows.Views.DashboardWindow"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- Style="{StaticResource AppWindow}" Title="工作防沉迷 · 今日" Width="1020" Height="820" MinWidth="820" MinHeight="600" WindowStartupLocation="CenterScreen">
+ Style="{StaticResource AppWindow}" Title="工作防沉迷 · 今日" Width="1020" Height="760" MinWidth="820" MinHeight="600" WindowStartupLocation="CenterScreen">
  <DockPanel Margin="32,24">
   <DockPanel DockPanel.Dock="Top" Margin="0,0,0,22"><Button DockPanel.Dock="Right" Content="偏好设置" Click="Settings_Click"/><StackPanel><TextBlock Text="工作防沉迷" FontSize="24" FontWeight="SemiBold"/><TextBlock Text="专注工作，也给身体留一点时间。" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,0"/></StackPanel></DockPanel>
   <TextBlock DockPanel.Dock="Bottom" Text="关闭窗口后，提醒继续在系统托盘运行 · 数据只保存在本机" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,16,0,0"/>
@@ -17,7 +17,7 @@
     <Border Style="{StaticResource Card}"><DockPanel><WrapPanel DockPanel.Dock="Right"><Button Content="远眺 20 秒" Click="Eyes_Click"/><Button Content="办公室活动 7 分钟" Click="Office_Click"/></WrapPanel><StackPanel VerticalAlignment="Center"><TextBlock Text="按自己的需要休息" FontWeight="SemiBold"/><TextBlock Text="随时开始，不必等到提醒。" Foreground="{StaticResource MutedBrush}" FontSize="13" Margin="0,5,12,0"/></StackPanel></DockPanel></Border>
    </StackPanel></ScrollViewer></TabItem>
    <TabItem Header="最近 7 天"><Grid Margin="0,20,0,0"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><DockPanel Margin="0,0,0,18"><Button DockPanel.Dock="Right" Content="导出全部记录" Click="Export_Click"/><StackPanel><TextBlock Text="观察变化，无需追求打卡" FontSize="22" FontWeight="SemiBold"/><TextBlock Text="每天的连续工作与休息记录，按本地日期统计。" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0"/></StackPanel></DockPanel>
-    <DataGrid x:Name="WeekGrid" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False" CanUserResizeRows="False" HeadersVisibility="Column" GridLinesVisibility="Horizontal" BorderThickness="0" Background="White" RowHeight="48" ColumnHeaderHeight="44" HorizontalScrollBarVisibility="Disabled" SelectionMode="Single">
+    <DataGrid x:Name="WeekGrid" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False" CanUserResizeRows="False" HeadersVisibility="Column" GridLinesVisibility="Horizontal" BorderThickness="0" Background="White" RowHeight="48" ColumnHeaderHeight="44" MinColumnWidth="140" HorizontalScrollBarVisibility="Disabled" SelectionMode="Single">
      <DataGrid.Columns><DataGridTextColumn Header="日期" Binding="{Binding Date}" Width="*"/><DataGridTextColumn Header="电脑活动" Binding="{Binding Active}" Width="*"/><DataGridTextColumn Header="最长连续" Binding="{Binding Longest}" Width="*"/><DataGridTextColumn Header="身体 / 眼睛休息" Binding="{Binding Breaks}" Width="1.3*"/></DataGrid.Columns>
     </DataGrid><TextBlock Grid.Row="2" Text="仅保存最近 90 天。休息次数表示计时流程完成，不代表验证了身体动作。" Foreground="{StaticResource MutedBrush}" Margin="0,16,0,0"/>
    </Grid></TabItem>

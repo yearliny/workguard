@@ -43,8 +43,11 @@ public partial class BreakWindow : Window
         StateChanged += (_, _) => { if (WindowState == WindowState.Minimized) PauseForInterruption(); };
     }
 
-    private void Start_Click(object sender, RoutedEventArgs e)
+    private void Start_Click(object sender, RoutedEventArgs e) => BeginSession();
+
+    public void BeginSession()
     {
+        if (_started) return;
         _started = true;
         if (_session.Kind != BreakKind.Eyes) WindowPlacement.Place(this, true, false);
         StartButton.Visibility = Visibility.Collapsed;

@@ -112,7 +112,7 @@ internal sealed class AppController : IDisposable
         reminder.Closed += (_, _) =>
         {
             _reminder = null;
-            if (reminder.Accepted) StartBreak(kind);
+            if (reminder.Accepted) StartBreak(kind, beginImmediately: true);
             else Engine.Snooze(TimeSpan.FromMinutes(5));
         };
         reminder.Show();
@@ -120,7 +120,7 @@ internal sealed class AppController : IDisposable
 
     private void DismissReminder() => _reminder?.Close();
 
-    public void StartBreak(BreakKind kind, bool automatic = false)
+    public void StartBreak(BreakKind kind, bool automatic = false, bool beginImmediately = false)
     {
         if (_locked || _sleeping) return;
         DismissReminder();
@@ -145,6 +145,7 @@ internal sealed class AppController : IDisposable
             Changed?.Invoke();
         };
         _break.Show();
+        if (beginImmediately) _break.BeginSession();
     }
 
     public void ShowDashboard()
