@@ -1,5 +1,16 @@
 # 0.1.0 交付验证记录
 
+## 两种发布包与 Releases：已通过
+
+- 验证源码与发布配置：`3c6254ef8f17f339ab171af9d61dc794b73a3a32`。
+- [构建与发布运行记录](https://github.com/yearliny/workguard/actions/runs/34079812798)：核心测试、Windows 构建、两种包启动检查和 Releases 发布全部成功。
+- [v0.1.0 预发布版](https://github.com/yearliny/workguard/releases/tag/v0.1.0)：已上传两种 ZIP 和 SHA256SUMS 校验文件。
+- 便携版：76,017,994 字节（约 72.5 MiB），包含 .NET 桌面运行时。
+- 精简版：119,068 字节（约 116.3 KiB），需要预装 .NET 10 Desktop Runtime x64。
+- 发布作业已核对跨 job 传输后的 ZIP 校验值，以及 Releases 中资产的名称和大小，再将草稿发布为 prerelease。
+
+两种包功能相同，差别仅为是否附带运行时。原包解压约 171 MiB，大部分为 .NET / WPF / Windows Forms 运行库，WorkGuard 自身文件约 335 KiB。新的压缩包移除了调试符号，并明确附带运行条件说明。
+
 ## GitHub Actions：已通过
 
 - 验证源码：`d6bda8b786f74d946c8abde5a0b5a6d0849afb7f`。
