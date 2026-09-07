@@ -20,7 +20,7 @@ try {
         # This directory contains only this script's generated output.
         if (Test-Path $out) { Remove-Item $out -Recurse -Force }
         $selfContained = if ($flavor -eq 'portable') { 'true' } else { 'false' }
-        & dotnet publish src/WorkGuard.Windows -c Release -r $Runtime --self-contained $selfContained -p:PublishSingleFile=false -o $out
+        & dotnet publish src/WorkGuard.Windows/WorkGuard.Windows.csproj -c Release -r $Runtime --self-contained $selfContained -p:PublishSingleFile=false -o $out
         if ($LASTEXITCODE -ne 0) { throw "Publish failed: $flavor" }
         Get-ChildItem $out -Filter *.pdb -File -Recurse | Remove-Item
         Copy-Item README.md $out

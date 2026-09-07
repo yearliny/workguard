@@ -8,3 +8,6 @@ artifacts/
 TestResults/
 *.zip
 *.log
+
+# WPF temporary markup compilation projects
+*_wpftmp.csproj

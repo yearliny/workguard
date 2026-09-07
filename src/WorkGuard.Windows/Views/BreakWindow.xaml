@@ -10,7 +10,7 @@
             <Button x:Name="StartButton" Content="开始休息" Style="{StaticResource PrimaryButton}" ui:Visuals.Glyph="&#xE768;" Click="Start_Click"/>
             <Button x:Name="PauseButton" Content="暂停" ui:Visuals.Glyph="&#xE769;" Click="Pause_Click" Visibility="Collapsed"/>
             <Button x:Name="SkipButton" Content="跳过这个动作" ui:Visuals.Glyph="&#xE893;" Click="Skip_Click" Visibility="Collapsed"/>
-            <Button x:Name="SnoozeButton" Content="5 分钟后提醒" ui:Visuals.Glyph="&#xE711;" Click="Exit_Click"/>
+            <Button x:Name="SnoozeButton" Content="5 分钟后提醒" ui:Visuals.Glyph="&#xE823;" Click="Exit_Click"/>
           </WrapPanel>
       <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel MaxWidth="650" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="8,8">

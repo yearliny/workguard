@@ -26,6 +26,10 @@
 - Windows 11 优先使用系统 Segoe Fluent Icons，Windows 10 使用 Segoe MDL2 Assets；不捆绑图标字体或新的 UI 框架。
 - 插画嵌入程序且限尺寸解码，无需网络。精简包因本地图片有所增大，仍不捆绑 .NET 运行时。
 
+![WorkGuard 0.3.0 今日概览](docs/images/dashboard-v0.3.png)
+
+截图为 Windows 原生界面，使用 CI 演示数据。
+
 [视觉素材、来源与生成说明](docs/VISUAL-ASSETS.md)
 
 ## 已实现
