@@ -14,7 +14,7 @@
       <Setter Property="UseLayoutRounding" Value="True"/>
     </Style>
     <Style TargetType="TextBlock">
-      <Setter Property="Foreground" Value="{StaticResource InkBrush}"/>
+      <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Control}}}"/>
       <Setter Property="TextWrapping" Value="Wrap"/>
     </Style>
     <Style TargetType="Button">

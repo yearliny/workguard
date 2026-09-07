@@ -30,7 +30,6 @@
                     <TextBlock x:Name="ContinuousText" FontSize="56" FontWeight="Light"/>
                     <TextBlock Text="分钟 · 本轮估计" VerticalAlignment="Bottom" Margin="12,0,0,14"/>
                   </StackPanel>
-                  <TextBlock Text="本轮连续电脑活动估计" Foreground="{StaticResource MutedBrush}"/>
                   <TextBlock x:Name="NextText" Margin="0,12,0,0"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
