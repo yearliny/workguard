@@ -1,4 +1,5 @@
 using System.Windows.Threading;
+using System.Windows.Media.Imaging;
 using WorkGuard.Windows.Platform;
 using WorkGuard.Windows.Views;
 
@@ -23,7 +24,20 @@ internal static class SmokeTest
                 windows.Add(new SettingsWindow(app));
                 windows.Add(new BreakWindow(BreakKind.Eyes, true, false, TimeSpan.FromMinutes(20)));
                 windows.Add(new BreakWindow(BreakKind.Movement, true, false, TimeSpan.FromMinutes(60)));
-                foreach (var window in windows) { window.Show(); window.UpdateLayout(); }
+                foreach (var window in windows)
+                {
+                    window.Show(); window.UpdateLayout();
+                    var directory = Environment.GetEnvironmentVariable("WORKGUARD_CAPTURE_DIR");
+                    if (!string.IsNullOrEmpty(directory))
+                    {
+                        Directory.CreateDirectory(directory);
+                        var bitmap = new RenderTargetBitmap((int)Math.Ceiling(window.ActualWidth), (int)Math.Ceiling(window.ActualHeight), 96, 96, PixelFormats.Pbgra32);
+                        bitmap.Render(window);
+                        var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
+                        using var file = File.Create(Path.Combine(directory, $"{windows.IndexOf(window)}-{window.GetType().Name}.png"));
+                        encoder.Save(file);
+                    }
+                }
                 File.WriteAllText(resultFile, "PASS: WPF resources, four windows, tray, input API, foreground detection");
             }
             catch (Exception error)
