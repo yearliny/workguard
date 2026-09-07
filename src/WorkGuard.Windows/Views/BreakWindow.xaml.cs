@@ -24,7 +24,8 @@ public partial class BreakWindow : Window
         ShowActivated = !automatic;
         if (kind == BreakKind.Eyes)
         {
-            Width = 490; Height = 620;
+            Width = 520; Height = 680;
+            RestArt.Source = (ImageSource)FindResource("WindowArt");
             Heading.Text = "目光，放远一点";
             Instruction.Text = "准备好后，看向窗外或远处 20 秒。结束时可播放提示音，不必盯着屏幕。";
             StartButton.Content = "开始 20 秒远眺";
@@ -50,6 +51,10 @@ public partial class BreakWindow : Window
     {
         if (_started) return;
         _started = true;
+        RestArt.Visibility = Visibility.Collapsed;
+        StateBadge.Visibility = Visibility.Visible;
+        NextStep.Visibility = StepLabel.Visibility = Visibility.Visible;
+        Countdown.FontSize = 76;
         if (_session.Kind != BreakKind.Eyes) WindowPlacement.Place(this, true, false);
         StartButton.Visibility = Visibility.Collapsed;
         SnoozeButton.Visibility = Visibility.Collapsed;
@@ -91,6 +96,12 @@ public partial class BreakWindow : Window
                 return;
             }
             if (_session.FullyCompleted && _sound) System.Media.SystemSounds.Asterisk.Play();
+            RestArt.Source = (ImageSource)FindResource("WindowArt");
+            RestArt.Visibility = Visibility.Visible;
+            StateBadge.Visibility = Visibility.Collapsed;
+            Countdown.FontSize = 44;
+            NextStep.Visibility = Visibility.Collapsed;
+            Visuals.SetGlyph(SnoozeButton, "\uE8FB");
             NextStep.Text = "";
             Heading.Text = _session.FullyCompleted ? "好了，带着轻松回来" : "这次就到这里";
             Instruction.Text = _session.FullyCompleted ? "活动流程已完成。准备好了，再继续工作。" : "你跳过了部分动作，这次不会记为完整活动。";
@@ -112,6 +123,7 @@ public partial class BreakWindow : Window
         Countdown.Text = TimeSpan.FromSeconds(Math.Ceiling(_session.Remaining.TotalSeconds)).ToString(@"mm\:ss");
         Progress.Value = 100 * _session.StepElapsed.TotalSeconds / exercise.Seconds;
         PauseButton.Content = _session.Paused ? "继续" : "暂停";
+        Visuals.SetGlyph(PauseButton, _session.Paused ? "\uE768" : "\uE769");
         StepLabel.Text = $"{_session.Index + 1} / {_session.Exercises.Count} · 已活动 {(int)_session.Observed.TotalSeconds} 秒";
     }
 

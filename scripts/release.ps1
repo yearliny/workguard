@@ -40,17 +40,17 @@ if ($existing.Count -gt 0 -and -not $existing[0].isDraft) {
 }
 
 $notes = @"
-工作防沉迷 $Version · 桌面体验与可靠性更新。源码：$Commit
+工作防沉迷 $Version · 更现代、友好的桌面视觉。源码：$Commit
 
-- 重做今日概览、七日统计、分组设置和活动界面。
-- 不抢焦点的角落提醒；主动开始后才进入全屏活动，支持暂停与随时退出。
-- 安静时段、日常 / 专注预设、可选提示音。
-- 本地数据损坏保护与备份恢复、CSV 导出、跨午夜计时修正。
-- 重复启动唤起已有窗口、跨会话数据写入保护、本地故障日志。
+- 新增两幅统一风格的离线插画，覆盖首页、设置、轻提醒和休息准备 / 完成状态。
+- 图标导航、彩色统计标记、两张活动入口卡片，以及更清晰的按钮、开关和输入框。
+- 活动进行时突出倒计时与说明，底部操作始终可访问。
+- 使用 Windows 原生图标字体，无新增 UI 框架；插画限尺寸解码。
+
 
 ## 下载
 
-仅提供 **lite.zip** 精简版。需要 [.NET 10 Desktop Runtime x64](https://dotnet.microsoft.com/download/dotnet/10.0)。完整解压后运行 WorkGuard.exe；Windows 内置的 .NET Framework 不能替代此运行时。
+仅提供 **lite.zip** 精简版，含本地插画。需要 [.NET 10 Desktop Runtime x64](https://dotnet.microsoft.com/download/dotnet/10.0)。完整解压后运行 WorkGuard.exe；Windows 内置的 .NET Framework 不能替代此运行时。
 
 目标为 Windows 10 22H2 / Windows 11 x64。SHA256SUMS-win-x64.txt 提供 ZIP 校验值。
 

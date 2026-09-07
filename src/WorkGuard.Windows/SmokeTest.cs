@@ -59,6 +59,11 @@ internal static class SmokeTest
                 for (var i = 0; i < 37 * 60; i++) app.Engine.Advance(TimeSpan.FromSeconds(1), new(TimeSpan.Zero, Quiet: true));
                 var dashboard = new DashboardWindow(app); windows.Add(dashboard); dashboard.Show();
                 Capture(dashboard, "01-today");
+                Check(dashboard.HeroArt.Source is BitmapSource { PixelWidth: 440 }, "Embedded illustration missing or unbounded decode");
+                var symbol = new Symbol();
+                Check(new Typeface(symbol.FontFamily, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal).TryGetGlyphTypeface(out var font), "Icon font missing");
+                foreach (var code in new[] { 0xE713, 0xE768, 0xE890, 0xE916, 0xE769, 0xE72C, 0xE74E, 0xE711, 0xE8B7, 0xE893, 0xE823, 0xE80F, 0xE787, 0xE708, 0xE7F4, 0xE8FB })
+                    Check(font.CharacterToGlyphMap.ContainsKey(code), $"Missing icon glyph {code:X}");
                 dashboard.Sections.SelectedIndex = 1; Capture(dashboard, "02-history");
                 Check(dashboard.WeekGrid.Columns.All(c => c.ActualWidth > 100), "Statistics columns collapsed");
                 var settings = new SettingsWindow(app); windows.Add(settings); settings.Show();

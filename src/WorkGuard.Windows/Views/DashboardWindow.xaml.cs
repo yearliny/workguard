@@ -32,6 +32,7 @@ public partial class DashboardWindow : Window
         BreaksText.Text = $"{today.MovementBreaks + today.OfficeBreaks} 次";
         EyeText.Text = $"眼睛休息 {today.EyeBreaks} 次 · 7 分钟办公室活动 {today.OfficeBreaks} 次";
         PauseButton.Content = _app.Paused ? "恢复提醒" : "暂停提醒 1 小时";
+        Visuals.SetGlyph(PauseButton, _app.Paused ? "\uE768" : "\uE769");
         if ((DateTime.Now - _lastWeekRefresh).Duration() < TimeSpan.FromSeconds(10)) return;
         _lastWeekRefresh = DateTime.Now;
         WeekGrid.ItemsSource = Enumerable.Range(0, 7).Select(i =>
