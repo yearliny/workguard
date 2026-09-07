@@ -10,9 +10,18 @@ namespace WorkGuard.Windows;
 internal sealed class AppController : IDisposable
 {
     public string DataDirectory { get; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WorkGuard");
-    public StoredState State { get; }
+    public StoredState State { get; private set; }
     public BreakEngine Engine { get; }
-    public bool MeetingMode { get; set; }
+    private bool _meetingMode;
+    public bool MeetingMode
+    {
+        get => _meetingMode;
+        set { _meetingMode = value; if (value) DismissReminder(); Changed?.Invoke(); }
+    }
+    public TimeSpan PauseRemaining => Paused ? _pauseUntil - _clock.Elapsed : TimeSpan.Zero;
+    public string? DataError { get; private set; }
+    public bool CanRestoreBackup => _store.CanRestoreBackup;
+    public bool QuietHoursActive => State.Preferences.IsQuietTime(TimeOnly.FromDateTime(DateTime.Now));
     public bool Paused => _clock.Elapsed < _pauseUntil;
     public string Status { get; private set; } = "正在观察工作节奏";
     public event Action? Changed;
@@ -26,12 +35,14 @@ internal sealed class AppController : IDisposable
     private DashboardWindow? _dashboard;
     private SettingsWindow? _settings;
     private BreakWindow? _break;
+    private ReminderWindow? _reminder;
 
     public AppController(string? dataDirectory = null)
     {
         if (dataDirectory is not null) DataDirectory = dataDirectory;
         _store = new LocalStore(DataDirectory);
         State = _store.Load();
+        DataError = _store.LoadWarning;
         Engine = new BreakEngine(State.Preferences);
     }
 
@@ -45,7 +56,7 @@ internal sealed class AppController : IDisposable
         _timer.Tick += Tick;
         _timer.Start();
         if (!State.Preferences.OnboardingComplete) ShowSettings();
-        if (_store.LoadWarning is not null) MessageBox.Show(_store.LoadWarning, "工作防沉迷 · 数据提示");
+        if (DataError is not null) ShowDashboard();
     }
 
     private void Tick(object? sender, EventArgs e)
@@ -55,10 +66,15 @@ internal sealed class AppController : IDisposable
         _lastTick = now;
         var before = Engine.TotalActive;
         var quietFullscreen = State.Preferences.QuietWhenFullscreen && WindowsActivity.IsOtherAppFullscreen();
+        if (quietFullscreen || QuietHoursActive || Paused || _locked || _sleeping) DismissReminder();
         if (_locked || _sleeping)
         {
             Engine.Advance(elapsed, new(TimeSpan.Zero, Unavailable: true));
             Status = "已锁屏或休眠";
+        }
+        else if (_break is { IsFinished: true })
+        {
+            Status = "活动已完成 · 准备好后继续";
         }
         else if (_break is { IsRunning: true })
         {
@@ -69,49 +85,51 @@ internal sealed class AppController : IDisposable
         else
         {
             var idle = WindowsActivity.IdleAge();
-            var quiet = Paused || MeetingMode || quietFullscreen || _break is not null || _settings is not null;
+            var quiet = Paused || MeetingMode || QuietHoursActive || quietFullscreen || _break is not null || _reminder is not null || _settings is not null;
             // Unavailable idle API disables inference; it must never imply absence.
             var result = Engine.Advance(elapsed, new(idle ?? TimeSpan.Zero, Quiet: quiet,
                 KeepCountingWithoutInput: MeetingMode || quietFullscreen || idle is null));
             if (State.Preferences.InferNaturalRest && !MeetingMode && !quietFullscreen &&
                 idle >= TimeSpan.FromMinutes(State.Preferences.NaturalRestMinutes) && _break is { HasStarted: false })
                 _break.Close();
-            Status = MeetingMode ? "会议模式 · 静默计时" : Paused ? "提醒已暂停 · 计时继续" :
+            if (State.Preferences.InferNaturalRest && !MeetingMode && !quietFullscreen && idle >= TimeSpan.FromMinutes(State.Preferences.NaturalRestMinutes)) DismissReminder();
+            Status = QuietHoursActive ? "安静时段 · 计时继续" : MeetingMode ? "会议模式 · 静默计时" : Paused ? "提醒已暂停 · 计时继续" :
                 quietFullscreen ? "全屏应用 · 静默计时" :
                 idle is null ? "无法读取空闲状态 · 按用屏时间估计" :
                 State.Preferences.InferNaturalRest && idle >= TimeSpan.FromMinutes(1) ? "暂未检测到输入 · 可能正在离席" : "正在工作 · 记得变换姿势";
             if (result == Reminder.MovementSoon)
                 _tray?.Notify("稍后，给身体一点时间", "还有约 10 分钟就到活动时间。可以先完成手头这一小段。");
             else if (result is Reminder.Movement or Reminder.Eyes)
-                StartBreak(result == Reminder.Eyes ? BreakKind.Eyes : BreakKind.Movement, automatic: true);
+                ShowReminder(result == Reminder.Eyes ? BreakKind.Eyes : BreakKind.Movement);
         }
-        RecordActive(Engine.TotalActive - before, DateTimeOffset.Now);
+        Statistics.Record(State, Engine.TotalActive - before, DateTimeOffset.Now, Engine.Continuous);
         if (now - _lastSave >= TimeSpan.FromSeconds(30)) { Save(); _lastSave = now; }
         _tray?.Update(Engine.Continuous, Engine.MovementDueIn, Paused, MeetingMode);
         Changed?.Invoke();
     }
 
-    private void RecordActive(TimeSpan duration, DateTimeOffset end)
+    private void ShowReminder(BreakKind kind)
     {
-        if (duration <= TimeSpan.Zero) return;
-        // Allocate a sample straddling midnight to the correct local dates.
-        var cursor = end - duration;
-        while (cursor < end)
+        if (_reminder is not null) return;
+        var reminder = new ReminderWindow(kind);
+        _reminder = reminder;
+        reminder.Closed += (_, _) =>
         {
-            var midnight = new DateTimeOffset(cursor.Date.AddDays(1), cursor.Offset);
-            var until = end < midnight ? end : midnight;
-            var day = LocalStore.Day(State, DateOnly.FromDateTime(cursor.Date));
-            day.ActiveSeconds += (until - cursor).TotalSeconds;
-            day.LongestSeconds = Math.Max(day.LongestSeconds, Engine.Continuous.TotalSeconds);
-            cursor = until;
-        }
+            _reminder = null;
+            if (reminder.Accepted) StartBreak(kind, beginImmediately: true);
+            else Engine.Snooze(TimeSpan.FromMinutes(5));
+        };
+        reminder.Show();
     }
 
-    public void StartBreak(BreakKind kind, bool automatic = false)
+    private void DismissReminder() => _reminder?.Close();
+
+    public void StartBreak(BreakKind kind, bool automatic = false, bool beginImmediately = false)
     {
         if (_locked || _sleeping) return;
+        DismissReminder();
         if (_break is not null) { if (!automatic) _break.Activate(); return; }
-        _break = new BreakWindow(kind, State.Preferences.GentleOnly, automatic, Engine.Continuous);
+        _break = new BreakWindow(kind, State.Preferences.GentleOnly, automatic, Engine.Continuous, State.Preferences.SoundEnabled);
         _break.Completed += session =>
         {
             if (session.FullyCompleted && Engine.Complete(session.Kind, session.Observed))
@@ -131,6 +149,7 @@ internal sealed class AppController : IDisposable
             Changed?.Invoke();
         };
         _break.Show();
+        if (beginImmediately) _break.BeginSession();
     }
 
     public void ShowDashboard()
@@ -151,23 +170,58 @@ internal sealed class AppController : IDisposable
 
     public bool ApplyPreferences(Preferences value)
     {
+        string? previousStartup = null;
+        var startupChanged = false;
+        var next = value.Validate() with { OnboardingComplete = true };
         try
         {
-            WindowsActivity.SetStartup(value.StartWithWindows);
-            State.Preferences = value.Validate() with { OnboardingComplete = true };
-            Engine.Configure(State.Preferences);
-            Save();
+            previousStartup = WindowsActivity.StartupCommand();
+            if (next.StartWithWindows || previousStartup is not null)
+            { WindowsActivity.SetStartup(next.StartWithWindows); startupChanged = true; }
+            _store.Save(new StoredState { Preferences = next, Days = State.Days });
+            State.Preferences = next;
+            Engine.Configure(next);
+            DataError = null;
+            if (QuietHoursActive) DismissReminder();
             Changed?.Invoke();
             return true;
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.Security.SecurityException)
         {
-            MessageBox.Show("无法更新开机启动设置：" + error.Message, "工作防沉迷");
+            try { if (startupChanged) WindowsActivity.RestoreStartup(previousStartup); } catch (Exception rollback) { Diagnostics.Record(rollback); }
+            DataError = "设置未保存。请检查数据文件或恢复备份后重试。";
+            Diagnostics.Record(error);
+            Changed?.Invoke();
             return false;
         }
     }
 
-    public void TogglePause() { _pauseUntil = Paused ? TimeSpan.Zero : _clock.Elapsed + TimeSpan.FromHours(1); Changed?.Invoke(); }
+    public void RestoreBackup()
+    {
+        if (MessageBox.Show("将恢复上一次成功保存的数据。当前文件会另外保留，恢复的设置需要重新确认。", "恢复本地备份", MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;
+        try
+        {
+            State = _store.RestoreBackup();
+            Engine.Configure(State.Preferences);
+            DataError = null;
+            _settings?.Close();
+            ShowSettings();
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        { DataError = "恢复失败，原数据仍然保留。请打开数据目录检查。"; Diagnostics.Record(error); }
+        Changed?.Invoke();
+    }
+
+    public void ExportCsv()
+    {
+        var dialog = new Microsoft.Win32.SaveFileDialog { Filter = "CSV 表格|*.csv", FileName = $"WorkGuard-{DateTime.Now:yyyy-MM-dd}.csv" };
+        if (dialog.ShowDialog() != true) return;
+        try { File.WriteAllText(dialog.FileName, Statistics.Csv(State.Days), new System.Text.UTF8Encoding(true)); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        { Diagnostics.Record(error); MessageBox.Show("无法导出，请选择可写入的位置。", "工作防沉迷"); }
+    }
+
+    public void TogglePause() { _pauseUntil = Paused ? TimeSpan.Zero : _clock.Elapsed + TimeSpan.FromHours(1); if (Paused) DismissReminder(); Changed?.Invoke(); }
 
     private void SessionSwitch(object sender, SessionSwitchEventArgs e) => OnUi(() =>
     {
@@ -190,6 +244,7 @@ internal sealed class AppController : IDisposable
         if (_locked || _sleeping)
         {
             _unavailableSince ??= _clock.Elapsed;
+            DismissReminder();
             if (_break is { HasStarted: false }) _break.Close();
             else _break?.PauseForInterruption();
         }
@@ -201,8 +256,8 @@ internal sealed class AppController : IDisposable
         _lastTick = _clock.Elapsed;
     }
 
-    private void DisplayChanged(object? sender, EventArgs e) => OnUi(() => _break?.Close());
-    private static void OnUi(Action action) => Application.Current.Dispatcher.BeginInvoke(action);
+    private void DisplayChanged(object? sender, EventArgs e) => OnUi(() => { DismissReminder(); _break?.Close(); });
+    private void OnUi(Action action) { if (!_disposed) Application.Current.Dispatcher.BeginInvoke(new Action(() => { if (!_disposed) action(); })); }
 
     public void Save()
     {
@@ -211,11 +266,14 @@ internal sealed class AppController : IDisposable
             State.Days.RemoveAll(d => d.Date < DateOnly.FromDateTime(DateTime.Now).AddDays(-89));
             _store.Save(State);
             _saveErrorShown = false;
+            DataError = null;
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
             if (!_saveErrorShown) _tray?.Notify("统计暂未保存", "本地文件暂时无法写入，稍后会自动重试。");
+            if (!_saveErrorShown) Diagnostics.Record(error);
             _saveErrorShown = true;
+            DataError = "本地数据暂未保存。请检查目录权限或恢复备份。";
         }
     }
 
@@ -224,6 +282,7 @@ internal sealed class AppController : IDisposable
         if (_disposed) return;
         _disposed = true;
         _timer.Stop();
+        DismissReminder();
         SystemEvents.SessionSwitch -= SessionSwitch;
         SystemEvents.PowerModeChanged -= PowerChanged;
         SystemEvents.DisplaySettingsChanged -= DisplayChanged;

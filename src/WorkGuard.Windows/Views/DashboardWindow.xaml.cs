@@ -19,6 +19,12 @@ public partial class DashboardWindow : Window
     {
         var today = LocalStore.Day(_app.State, DateOnly.FromDateTime(DateTime.Now));
         StatusText.Text = _app.Status;
+        ErrorBanner.Visibility = _app.DataError is null ? Visibility.Collapsed : Visibility.Visible;
+        ErrorText.Text = _app.DataError;
+        RestoreButton.IsEnabled = _app.CanRestoreBackup;
+        TimingHint.Text = _app.Paused ? $"约 {Math.Ceiling(_app.PauseRemaining.TotalMinutes)} 分钟后自动恢复" :
+            _app.Engine.SnoozeRemaining > TimeSpan.Zero ? $"提醒已推迟 {Math.Ceiling(_app.Engine.SnoozeRemaining.TotalMinutes)} 分钟" :
+            _app.State.Preferences.EyeReminders ? $"下次远眺约 {Math.Ceiling(_app.Engine.EyeDueIn.TotalMinutes)} 分钟后" : "眼睛提醒已关闭";
         ContinuousText.Text = ((int)_app.Engine.Continuous.TotalMinutes).ToString("00");
         NextText.Text = _app.Engine.MovementDueIn > TimeSpan.Zero ? $"约 {Math.Ceiling(_app.Engine.MovementDueIn.TotalMinutes)} 分钟后，起来走一走。" : "已经到了活动时间，给身体几分钟。";
         ActiveText.Text = Time(today.ActiveSeconds);
@@ -37,6 +43,8 @@ public partial class DashboardWindow : Window
                 Breaks = day is null ? "—" : $"{day.MovementBreaks + day.OfficeBreaks} / {day.EyeBreaks}" };
         }).ToArray();
     }
+    private void Restore_Click(object sender, RoutedEventArgs e) => _app.RestoreBackup();
+    private void Export_Click(object sender, RoutedEventArgs e) => _app.ExportCsv();
     private void Settings_Click(object sender, RoutedEventArgs e) => _app.ShowSettings();
     private void Movement_Click(object sender, RoutedEventArgs e) => _app.StartBreak(BreakKind.Movement);
     private void Eyes_Click(object sender, RoutedEventArgs e) => _app.StartBreak(BreakKind.Eyes);

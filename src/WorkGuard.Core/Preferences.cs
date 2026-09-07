@@ -11,11 +11,26 @@ public sealed record Preferences
     public bool GentleOnly { get; init; } = true;
     public bool StartWithWindows { get; init; }
     public bool OnboardingComplete { get; init; }
+    public bool SoundEnabled { get; init; } = true;
+    public bool QuietHoursEnabled { get; init; }
+    public int QuietStartMinute { get; init; } = 12 * 60;
+    public int QuietEndMinute { get; init; } = 13 * 60;
 
     public Preferences Validate() => this with
     {
         EyeIntervalMinutes = Math.Clamp(EyeIntervalMinutes, 10, 60),
         MovementIntervalMinutes = Math.Clamp(MovementIntervalMinutes, 30, 120),
-        NaturalRestMinutes = Math.Clamp(NaturalRestMinutes, 3, 15)
+        NaturalRestMinutes = Math.Clamp(NaturalRestMinutes, 3, 15),
+        QuietStartMinute = Math.Clamp(QuietStartMinute, 0, 1439),
+        QuietEndMinute = Math.Clamp(QuietEndMinute, 0, 1439)
     };
+
+    public bool IsQuietTime(TimeOnly time)
+    {
+        if (!QuietHoursEnabled || QuietStartMinute == QuietEndMinute) return false;
+        var minute = time.Hour * 60 + time.Minute;
+        return QuietStartMinute < QuietEndMinute
+            ? minute >= QuietStartMinute && minute < QuietEndMinute
+            : minute >= QuietStartMinute || minute < QuietEndMinute;
+    }
 }

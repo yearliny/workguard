@@ -4,6 +4,60 @@ using WorkGuard.Data;
 // Dependency-free deterministic behavior checks. Nonzero exit code fails CI.
 var tests = new (string Name, Action Run)[]
 {
+    ("Quiet hours include start and exclude end", () =>
+    {
+        var p = new Preferences { QuietHoursEnabled = true, QuietStartMinute = 720, QuietEndMinute = 780 };
+        True(p.IsQuietTime(new TimeOnly(12, 0))); True(!p.IsQuietTime(new TimeOnly(13, 0)));
+        True(!(p with { QuietHoursEnabled = false }).IsQuietTime(new TimeOnly(12, 30)));
+    }),
+    ("Overnight quiet hours and equal endpoints", () =>
+    {
+        var p = new Preferences { QuietHoursEnabled = true, QuietStartMinute = 1320, QuietEndMinute = 420 };
+        True(p.IsQuietTime(new TimeOnly(23, 0))); True(p.IsQuietTime(new TimeOnly(6, 59)));
+        True(!p.IsQuietTime(new TimeOnly(7, 0))); True(!p.IsQuietTime(new TimeOnly(12, 0)));
+        True(!(p with { QuietEndMinute = 1320 }).IsQuietTime(new TimeOnly(23, 0)));
+    }),
+    ("Midnight tick splits active time into both dates", () =>
+    {
+        var state = new StoredState(); var end = new DateTimeOffset(2026, 9, 8, 0, 0, 2, TimeSpan.FromHours(8));
+        Statistics.Record(state, Seconds(4), end, Seconds(104));
+        Equal(2d, state.Days[0].ActiveSeconds); Equal(2d, state.Days[1].ActiveSeconds);
+        Equal(102d, state.Days[0].LongestSeconds); Equal(104d, state.Days[1].LongestSeconds);
+        Statistics.Record(state, Seconds(30), end, Seconds(200)); Equal(4d, state.Days.Sum(d => d.ActiveSeconds));
+    }),
+    ("CSV export is ordered and culture independent", () =>
+    {
+        var before = System.Globalization.CultureInfo.CurrentCulture;
+        try
+        {
+            System.Globalization.CultureInfo.CurrentCulture = new("fr-FR");
+            var csv = Statistics.Csv([new DayStats { Date = new(2026, 9, 8), ActiveSeconds = 90 }, new DayStats { Date = new(2026, 9, 7) }]);
+            True(csv.Contains("2026-09-08,1.50,0.00,0,0,0")); True(csv.IndexOf("2026-09-07", StringComparison.Ordinal) < csv.IndexOf("2026-09-08", StringComparison.Ordinal));
+        }
+        finally { System.Globalization.CultureInfo.CurrentCulture = before; }
+    }),
+    ("Valid backup restores without destroying corrupt original", () => WithDirectory(path =>
+    {
+        var store = new LocalStore(path); var state = store.Load(); LocalStore.Day(state, new(2026, 9, 7)).EyeBreaks = 5;
+        store.Save(state); store.Save(state); File.WriteAllText(Path.Combine(path, "state.json"), "{broken");
+        var reopened = new LocalStore(path); reopened.Load(); True(reopened.ReadOnly);
+        var recovered = reopened.RestoreBackup(); Equal(5, recovered.Days.Single().EyeBreaks); True(!reopened.ReadOnly);
+        Equal("{broken", File.ReadAllText(Directory.GetFiles(path, "state.json.preserved-*").Single()));
+        reopened.Save(recovered); Equal(5, new LocalStore(path).Load().Days.Single().EyeBreaks);
+    })),
+    ("Invalid backup cannot replace current state", () => WithDirectory(path =>
+    {
+        var store = new LocalStore(path); store.Save(store.Load());
+        var original = File.ReadAllText(Path.Combine(path, "state.json"));
+        File.WriteAllText(Path.Combine(path, "state.json.bak"), "{broken"); ThrowsIo(() => store.RestoreBackup());
+        Equal(original, File.ReadAllText(Path.Combine(path, "state.json")));
+    })),
+    ("Old preferences load new defaults without migration", () => WithDirectory(path =>
+    {
+        File.WriteAllText(Path.Combine(path, "state.json"), "{\"SchemaVersion\":1,\"Preferences\":{\"EyeIntervalMinutes\":25}}");
+        var store = new LocalStore(path); var state = store.Load(); True(!store.ReadOnly);
+        Equal(25, state.Preferences.EyeIntervalMinutes); True(state.Preferences.SoundEnabled); True(!state.Preferences.QuietHoursEnabled);
+    })),
     ("Eye reminder becomes due at 20 minutes", () =>
     {
         var e = Engine(); Work(e, 1199); Equal(Reminder.Eyes, e.Advance(Seconds(1), Active()));
@@ -132,13 +186,13 @@ var tests = new (string Name, Action Run)[]
     ("Corrupt state remains untouched", () => WithDirectory(path =>
     {
         var file = Path.Combine(path, "state.json"); File.WriteAllText(file, "{broken");
-        var store = new LocalStore(path); var state = store.Load(); store.Save(state);
+        var store = new LocalStore(path); var state = store.Load(); ThrowsIo(() => store.Save(state));
         True(store.ReadOnly); True(store.LoadWarning is not null); Equal("{broken", File.ReadAllText(file));
     })),
     ("Future schema remains untouched", () => WithDirectory(path =>
     {
         var file = Path.Combine(path, "state.json"); const string json = "{\"SchemaVersion\":99}"; File.WriteAllText(file, json);
-        var store = new LocalStore(path); store.Save(store.Load()); True(store.ReadOnly); Equal(json, File.ReadAllText(file));
+        var store = new LocalStore(path); ThrowsIo(() => store.Save(store.Load())); True(store.ReadOnly); Equal(json, File.ReadAllText(file));
     })),
     ("Invalid counts are rejected", () => WithDirectory(path =>
     {
@@ -179,3 +233,5 @@ static void WithDirectory(Action<string> run)
     Directory.CreateDirectory(path);
     try { run(path); } finally { Directory.Delete(path, recursive: true); }
 }
+
+static void ThrowsIo(Action action) { try { action(); } catch (IOException) { return; } throw new InvalidOperationException("Expected IOException"); }

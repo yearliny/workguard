@@ -1,4 +1,4 @@
-name: Build and verify Windows MVP
+name: Build and verify WorkGuard
 on:
   push:
     branches: [main]
@@ -37,7 +37,15 @@ jobs:
         run: dotnet build WorkGuard.slnx -c Release
       - name: Load real Windows views and native integration
         shell: pwsh
+        env:
+          WORKGUARD_CAPTURE_DIR: artifacts/screenshots
         run: ./scripts/smoke-windows.ps1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-ui
+          path: artifacts/screenshots/*.png
+          retention-days: 30
       - name: Read application version
         id: version
         shell: pwsh
@@ -45,13 +53,12 @@ jobs:
           $version = ([xml](Get-Content src/WorkGuard.Windows/WorkGuard.Windows.csproj -Raw)).Project.PropertyGroup.Version
           if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') { throw 'Invalid application version.' }
           "version=$version" >> $env:GITHUB_OUTPUT
-      - name: Package portable and lightweight Windows apps
+      - name: Package lightweight Windows app
         shell: pwsh
         run: ./scripts/publish.ps1 -Runtime win-x64 -SkipTests
-      - name: Verify both packaged applications
+      - name: Verify packaged application
         shell: pwsh
         run: |
-          ./scripts/smoke-windows.ps1 -Executable ./artifacts/publish/win-x64/portable/WorkGuard.exe
           ./scripts/smoke-windows.ps1 -Executable ./artifacts/publish/win-x64/lite/WorkGuard.exe
       - uses: actions/upload-artifact@v4
         with:
