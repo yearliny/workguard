@@ -10,7 +10,12 @@ public partial class DashboardWindow : Window
     {
         InitializeComponent();
         _app = app;
-        HeroArt.SizeChanged += (_, _) => HeroArt.Clip = new RectangleGeometry(new Rect(0, 0, HeroArt.ActualWidth, HeroArt.ActualHeight), 20, 20);
+        SizeChanged += (_, _) =>
+        {
+            var wide = ActualWidth >= 980;
+            HeroImagePanel.Visibility = wide ? Visibility.Visible : Visibility.Collapsed;
+            HeroImageColumn.Width = new GridLength(wide ? 240 : 0);
+        };
         _app.Changed += Refresh;
         Closed += (_, _) => _app.Changed -= Refresh;
         Refresh();

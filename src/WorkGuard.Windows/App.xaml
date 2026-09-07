@@ -34,12 +34,15 @@
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="Button">
+            <Grid>
             <Border x:Name="Border" CornerRadius="14" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
               <StackPanel Orientation="Horizontal" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center">
                 <ui:Symbol x:Name="ButtonGlyph" Text="{Binding (ui:Visuals.Glyph), RelativeSource={RelativeSource TemplatedParent}}" Foreground="{TemplateBinding Foreground}" FontSize="16" Margin="0,0,9,0"/>
                 <ContentPresenter VerticalAlignment="Center" RecognizesAccessKey="True"/>
               </StackPanel>
             </Border>
+            <Border x:Name="FocusRing" IsHitTestVisible="False" CornerRadius="17" BorderBrush="{StaticResource AccentBrush}" BorderThickness="2" Margin="-3" Visibility="Collapsed"/>
+            </Grid>
             <ControlTemplate.Triggers>
               <Trigger Property="ui:Visuals.Glyph" Value=""><Setter TargetName="ButtonGlyph" Property="Visibility" Value="Collapsed"/></Trigger>
               <Trigger Property="IsMouseOver" Value="True">
@@ -50,7 +53,7 @@
               </Trigger>
               <Trigger Property="IsKeyboardFocused" Value="True">
                 <Setter TargetName="Border" Property="BorderBrush" Value="#326958"/>
-                <Setter TargetName="Border" Property="BorderThickness" Value="3"/>
+                <Setter TargetName="FocusRing" Property="Visibility" Value="Visible"/>
               </Trigger>
               <Trigger Property="IsEnabled" Value="False">
                 <Setter TargetName="Border" Property="Opacity" Value="0.45"/>
@@ -75,7 +78,7 @@
         <ControlTemplate.Triggers>
           <Trigger Property="IsSelected" Value="True"><Setter TargetName="TabBorder" Property="BorderBrush" Value="#D2DFD6"/><Setter TargetName="TabBorder" Property="Background" Value="#E5ECE3"/></Trigger>
           <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="TabBorder" Property="Background" Value="#E5ECE3"/></Trigger>
-          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="TabBorder" Property="BorderBrush" Value="{StaticResource AccentBrush}"/><Setter TargetName="TabBorder" Property="BorderThickness" Value="2"/></Trigger>
+          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="TabBorder" Property="BorderBrush" Value="{StaticResource AccentBrush}"/><Setter TargetName="TabBorder" Property="BorderThickness" Value="1"/></Trigger>
         </ControlTemplate.Triggers>
       </ControlTemplate></Setter.Value></Setter>
     </Style>

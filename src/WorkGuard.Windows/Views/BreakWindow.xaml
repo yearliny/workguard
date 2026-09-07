@@ -38,8 +38,8 @@
           </StackPanel>
         </ScrollViewer>
         <Grid x:Name="ScenicPanel" Grid.Column="1" Margin="28,12,12,12" MaxWidth="440" MaxHeight="600" ui:Motion.Enter="True">
-          <Border x:Name="SceneryFrame" CornerRadius="180,180,28,28" Background="#D9DFC9"/>
-          <Image x:Name="RestArt" Source="{StaticResource SanctuaryArt}" Stretch="UniformToFill" IsHitTestVisible="False"/>
+          <Border x:Name="SceneryFrame" CornerRadius="180,180,28,28" Background="Transparent"/>
+          <ui:SceneImage x:Name="RestArt" Source="{StaticResource SanctuaryArt}" CornerRadius="28"/>
           <Border Background="#EEFBFAF5" CornerRadius="18" Padding="20,16" Margin="20" VerticalAlignment="Bottom">
             <StackPanel><TextBlock x:Name="SceneName" Text="此刻，无需赶路" FontSize="20" FontWeight="SemiBold"/><TextBlock x:Name="SceneNote" Text="远处的风景，值得抬头看看。" Foreground="{StaticResource MutedBrush}" FontSize="13" Margin="0,8,0,0"/></StackPanel>
           </Border>

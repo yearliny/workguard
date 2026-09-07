@@ -37,6 +37,13 @@ internal static class SmokeTest
         using var file = File.Create(Path.Combine(directory, name + ".png")); encoder.Save(file);
     }
 
+    private static T FindAncestor<T>(DependencyObject element) where T : DependencyObject
+    {
+        for (var parent = VisualTreeHelper.GetParent(element); parent is not null; parent = VisualTreeHelper.GetParent(parent))
+            if (parent is T result) return result;
+        throw new InvalidOperationException("Expected visual ancestor " + typeof(T).Name);
+    }
+
     private static void Pump(int milliseconds)
     {
         var frame = new DispatcherFrame();
@@ -68,6 +75,9 @@ internal static class SmokeTest
                 for (var i = 0; i < 37 * 60; i++) app.Engine.Advance(TimeSpan.FromSeconds(1), new(TimeSpan.Zero, Quiet: true));
                 var dashboard = new DashboardWindow(app); windows.Add(dashboard); dashboard.Show();
                 Capture(dashboard, "01-today");
+                var actionViewport = FindAncestor<ScrollViewer>(dashboard.EyesAction);
+                var actionBounds = dashboard.EyesAction.TransformToAncestor(actionViewport).TransformBounds(new Rect(dashboard.EyesAction.RenderSize));
+                Check(actionBounds.Bottom <= actionViewport.ActualHeight + 1, "Default dashboard clips activity actions");
                 Check(dashboard.HeroArt.Source is BitmapSource { PixelWidth: 1000 }, "Embedded illustration missing or unbounded decode");
                 var symbol = new Symbol();
                 Check(new Typeface(symbol.FontFamily, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal).TryGetGlyphTypeface(out var font), "Icon font missing");
@@ -147,6 +157,7 @@ internal static class SmokeTest
                 Motion.SystemAnimationOverride = false; Motion.Configure(false);
                 Motion.Reveal(animated.SceneContent); Check(!animated.SceneContent.HasAnimatedProperties, "System reduced motion ignored");
                 Motion.SystemAnimationOverride = null; Motion.Configure(true); animated.Close();
+                dashboard.Sections.SelectedIndex = 0;
                 dashboard.Width = 820; dashboard.Height = 620; Capture(dashboard, "21-compact-dashboard");
                 var compact = new BreakWindow(BreakKind.Eyes, true, false, TimeSpan.Zero, false);
                 windows.Add(compact); compact.Show(); compact.Width = 640; compact.Height = 620; Capture(compact, "22-compact-rest");

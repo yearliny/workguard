@@ -20,7 +20,7 @@ public sealed class ProgressRing : FrameworkElement
         var ring = (ProgressRing)d; var target = Math.Clamp(double.IsFinite((double)e.NewValue) ? (double)e.NewValue : 0, 0, 1);
         var from = (double)ring.GetValue(DisplayProperty); ring.SetValue(DisplayProperty, target);
         Motion.TrackClock(ring, DisplayProperty);
-        ring.BeginAnimation(DisplayProperty, Motion.Enabled && ring.IsVisible ? new DoubleAnimation(from, target, TimeSpan.FromMilliseconds(500))
+        ring.BeginAnimation(DisplayProperty, Motion.Enabled && ring.IsVisible && target > from + .000001 ? new DoubleAnimation(from, target, TimeSpan.FromMilliseconds(500))
         { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }, FillBehavior = FillBehavior.Stop } : null);
     }
     protected override void OnRender(DrawingContext context)

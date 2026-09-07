@@ -78,7 +78,6 @@ public partial class BreakWindow : Window
             _covers.Clear(); Ended?.Invoke(_session);
         };
         SizeChanged += (_, _) => FitScene();
-        RestArt.SizeChanged += (_, _) => RestArt.Clip = new RectangleGeometry(new Rect(0, 0, RestArt.ActualWidth, RestArt.ActualHeight), 28, 28);
         StateChanged += (_, _) => { if (WindowState == WindowState.Minimized) PauseForInterruption(); };
     }
 
