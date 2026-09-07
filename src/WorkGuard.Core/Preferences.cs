@@ -21,6 +21,13 @@ public sealed record Preferences
     public bool QuietHoursEnabled { get; init; }
     public int QuietStartMinute { get; init; } = 12 * 60;
     public int QuietEndMinute { get; init; } = 13 * 60;
+    public bool WorkScheduleEnabled { get; init; }
+    // Bits follow DayOfWeek: Sunday=1, Monday=2, ... Saturday=64.
+    public int WorkDays { get; init; } = 62;
+    public int WorkStartMinute { get; init; } = 9 * 60;
+    public int WorkEndMinute { get; init; } = 18 * 60;
+    public bool OfficeReminderEnabled { get; init; }
+    public int OfficeReminderMinute { get; init; } = 15 * 60;
 
     public Preferences Validate() => this with
     {
@@ -28,7 +35,11 @@ public sealed record Preferences
         MovementIntervalMinutes = Math.Clamp(MovementIntervalMinutes, 30, 120),
         NaturalRestMinutes = Math.Clamp(NaturalRestMinutes, 3, 15),
         QuietStartMinute = Math.Clamp(QuietStartMinute, 0, 1439),
-        QuietEndMinute = Math.Clamp(QuietEndMinute, 0, 1439)
+        QuietEndMinute = Math.Clamp(QuietEndMinute, 0, 1439),
+        WorkDays = WorkDays & 127,
+        WorkStartMinute = Math.Clamp(WorkStartMinute, 0, 1439),
+        WorkEndMinute = Math.Clamp(WorkEndMinute, 0, 1439),
+        OfficeReminderMinute = Math.Clamp(OfficeReminderMinute, 0, 1439)
     };
 
     public bool IsQuietTime(TimeOnly time)

@@ -190,6 +190,67 @@ internal static class SmokeTest
                 Check(!welcome.IsVisible && finishedCalls == 1 && saved is { MovementIntervalMinutes: 50, StrictMode: true, SoundEnabled: false, OnboardingComplete: true }, "Onboarding retry failed");
                 var abandoned = new WelcomeWindow(new Preferences(), _ => throw new InvalidOperationException("Close saved onboarding"), () => null, () => throw new InvalidOperationException("Close finished onboarding"));
                 windows.Add(abandoned); abandoned.Show(); abandoned.Close();
+                // Calendar and delivery use the real controller, with deterministic injected samples.
+                using var scheduled = new AppController(Path.Combine(folder, "schedule"));
+                scheduled.State.Preferences = scheduled.State.Preferences with
+                { OnboardingComplete = true, OfficeReminderEnabled = true, StrictMode = true, ReduceMotion = true };
+                scheduled.Engine.Configure(scheduled.State.Preferences);
+                var noon = new DateTimeOffset(DateTime.Today.AddHours(15));
+                scheduled.MeetingMode = true;
+                for (var i = 0; i < 5; i++) scheduled.Advance(TimeSpan.FromSeconds(1), noon.AddSeconds(i), TimeSpan.Zero, false);
+                Check(!Application.Current.Windows.OfType<ReminderWindow>().Any(w => w.IsVisible), "Appointment interrupted meeting");
+                Check(scheduled.Status.Contains("会议"), "Meeting status is misleading");
+                scheduled.MeetingMode = false;
+                scheduled.Advance(TimeSpan.FromSeconds(1), noon.AddSeconds(5), TimeSpan.Zero, false);
+                Check(scheduled.Delivery.Reason == DeliveryReason.Returning && scheduled.State.LastOfficeReminderDate is null, "Meeting exit skipped return buffer");
+                for (var i = 0; i < 15; i++) scheduled.Advance(TimeSpan.FromSeconds(1), noon.AddSeconds(6 + i), TimeSpan.Zero, false);
+                var invitation = Application.Current.Windows.OfType<ReminderWindow>().Single(w => w.IsVisible);
+                windows.Add(invitation); Capture(invitation, "30-office-invitation");
+                Check(invitation.Kind == BreakKind.Office && !invitation.ShowActivated, "Appointment type/focus incorrect");
+                Check(invitation.StartButton.Content.ToString()!.Contains("7"), "Office invitation labels wrong duration");
+                Check(scheduled.State.LastOfficeReminderDate == DateOnly.FromDateTime(noon.DateTime), "Invitation was not persisted");
+                Check(!scheduled.State.Days.Any(d => d.OfficeBreaks > 0), "Invitation awarded activity credit");
+                Click(invitation, "StartButton");
+                var office = Application.Current.Windows.OfType<BreakWindow>().Single(w => w.IsVisible);
+                windows.Add(office);
+                Check(office.IsRunning && office.SkipButton.Visibility != Visibility.Collapsed, "Appointment became forced training");
+                office.CloseForSystem();
+                using (var restarted = new AppController(Path.Combine(folder, "schedule")))
+                {
+                    restarted.Advance(TimeSpan.FromSeconds(1), noon.AddMinutes(1), TimeSpan.Zero, false);
+                    Check(!Application.Current.Windows.OfType<ReminderWindow>().Any(w => w.IsVisible), "Restart duplicated daily invitation");
+                }
+                var calendar = new DashboardWindow(scheduled); windows.Add(calendar); calendar.Show();
+                scheduled.State.Preferences = scheduled.State.Preferences with { WorkScheduleEnabled = true, WorkDays = 62, QuietHoursEnabled = true };
+                scheduled.Advance(TimeSpan.FromSeconds(1), noon.AddHours(5), TimeSpan.Zero, false);
+                calendar.Sections.SelectedItem = calendar.ScheduleTab; Capture(calendar, "28-daily-plan");
+                Check(calendar.DeliveryTitle.Text.Contains("工作时段之外"), "Calendar status contradicts delivery policy");
+                calendar.Width = 820; calendar.Height = 620; Capture(calendar, "31-compact-daily-plan");
+                var plan = new SettingsWindow(scheduled); windows.Add(plan); plan.Show();
+                plan.Sections.SelectedItem = plan.ScheduleTab; Capture(plan, "29-schedule-settings");
+                plan.WorkEnabled.IsChecked = true;
+                foreach (var day in new[] { plan.Monday, plan.Tuesday, plan.Wednesday, plan.Thursday, plan.Friday, plan.Saturday, plan.Sunday }) day.IsChecked = false;
+                Click(plan, "SaveButton");
+                Check(plan.IsVisible && plan.ValidationText.Text.Contains("至少一个"), "Empty workdays accepted");
+                plan.Friday.IsChecked = true; plan.WorkStart.Text = "22:00"; plan.WorkEnd.Text = "07:00";
+                plan.OfficeTime.Text = "25:00"; Click(plan, "SaveButton");
+                Check(plan.IsVisible && plan.ValidationText.Text.Contains("预约"), "Invalid appointment accepted");
+                plan.OfficeTime.Text = "23:00";
+                plan.Width = 700; plan.Height = 580; Capture(plan, "32-compact-schedule-settings");
+                var inputViewport = FindAncestor<ScrollViewer>(plan.OfficeTime);
+                var inputBounds = plan.OfficeTime.TransformToAncestor(inputViewport).TransformBounds(new Rect(plan.OfficeTime.RenderSize));
+                Check(inputBounds.Top >= -1 && inputBounds.Bottom <= inputViewport.ActualHeight + 1, "Focused schedule input clipped after resizing");
+                Click(plan, "SaveButton");
+                Check(!plan.IsVisible && scheduled.State.Preferences is { WorkDays: 32, WorkStartMinute: 1320, WorkEndMinute: 420, OfficeReminderMinute: 1380 }, "Valid overnight schedule failed to save");
+                using (var reopened = new AppController(Path.Combine(folder, "schedule")))
+                    Check(reopened.State.LastOfficeReminderDate == DateOnly.FromDateTime(noon.DateTime), "Saving preferences lost daily receipt");
+                // Write failure must not claim that an invitation was delivered.
+                using var unwritable = new AppController(Path.Combine(folder, "blocked"));
+                unwritable.State.Preferences = new Preferences { OnboardingComplete = true, OfficeReminderEnabled = true };
+                File.WriteAllText(Path.Combine(folder, "blocked"), "file occupies data directory");
+                unwritable.Advance(TimeSpan.FromSeconds(1), noon, TimeSpan.Zero, false);
+                Check(unwritable.DataError is not null && unwritable.State.LastOfficeReminderDate is null, "Failed save falsely marked invitation delivered");
+                Check(!Application.Current.Windows.OfType<ReminderWindow>().Any(w => w.IsVisible), "Invitation displayed before durable reservation");
                 File.WriteAllText(resultFile, "PASS: WPF views, layout, settings validation, reminder focus policy, pause, completion, skip, tray, input API, foreground detection");
             }
             catch (Exception error)
