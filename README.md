@@ -4,6 +4,12 @@
 
 **0.1.0 MVP** · C# / .NET 10 / WPF · 无账户、无服务器、无广告、无应用遥测
 
+## 下载试用
+
+[下载 Windows x64 便携包](https://github.com/yearliny/workguard/actions/runs/34078387890/artifacts/10002885588) · [已通过的 Windows CI](https://github.com/yearliny/workguard/actions/runs/34078387890) · [验证记录](docs/VERIFICATION.md)
+
+需要登录具有仓库访问权限的 GitHub 账户。解压至包含 `WorkGuard.exe` 的完整目录后运行，无需另装 .NET。此构建产物保留 30 天；过期后可在 Actions 手动重新构建。
+
 ## 已实现
 
 - 系统托盘常驻，关闭概览不会退出；托盘菜单可退出。
@@ -44,7 +50,7 @@ dotnet build WorkGuard.slnx -c Release
 ./scripts/publish.ps1 -Runtime win-arm64
 ```
 
-上传 GitHub 后，每次推送 `main` 或打开 PR 都会运行 CI。构建成功后，在 Actions 对应运行的 Artifacts 下载便携包。CI 不自动发布公开 Release。
+每次推送 `main` 或打开 PR 都会运行 CI。构建成功后，在 Actions 对应运行的 Artifacts 下载便携包。CI 不自动发布公开 Release。
 
 ## 计时规则：避免错误的“休息信用”
 
