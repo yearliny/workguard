@@ -232,6 +232,7 @@ internal sealed class AppController : IDisposable
             Motion.Configure(State.Preferences.ReduceMotion);
             Engine.Configure(State.Preferences);
             DataError = null;
+            _welcome?.Close(); // Discard the old draft after replacing preferences from backup.
             _settings?.Close();
             ShowSettings();
         }
