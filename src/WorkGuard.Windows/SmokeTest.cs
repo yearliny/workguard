@@ -72,6 +72,7 @@ internal static class SmokeTest
                     day.ActiveSeconds = 13080 + i * 120; day.LongestSeconds = 2820 + i * 60;
                     day.EyeBreaks = 8; day.MovementBreaks = 3; day.OfficeBreaks = 1;
                 }
+                app.State.Preferences = app.State.Preferences with { OnboardingComplete = true };
                 for (var i = 0; i < 37 * 60; i++) app.Engine.Advance(TimeSpan.FromSeconds(1), new(TimeSpan.Zero, Quiet: true));
                 var dashboard = new DashboardWindow(app); windows.Add(dashboard); dashboard.Show();
                 Capture(dashboard, "01-today");
@@ -101,7 +102,7 @@ internal static class SmokeTest
                 var body = new BreakWindow(BreakKind.Movement, true, false, TimeSpan.FromMinutes(60), false);
                 windows.Add(body); body.Show(); Capture(body, "08-body-ready");
                 var completed = 0; body.Completed += _ => completed++;
-                Check(!body.HasStarted, "Body activity starts without consent");
+                Check(!body.HasStarted && body.RouteItems.Items.Count == 3, "Body preview missing or starts without consent");
                 Click(body, "StartButton"); body.Tick(TimeSpan.FromSeconds(10)); Capture(body, "09-body-running");
                 body.PauseForInterruption(); var count = body.Countdown.Text; body.Tick(TimeSpan.FromSeconds(5));
                 Check(body.Countdown.Text == count && !body.IsRunning, "Paused body activity advances"); Capture(body, "10-body-paused");
@@ -110,7 +111,7 @@ internal static class SmokeTest
                 var skip = new BreakWindow(BreakKind.Movement, true, false, TimeSpan.Zero, false);
                 windows.Add(skip); skip.Show(); var skippedCredit = 0; skip.Completed += _ => skippedCredit++;
                 Click(skip, "StartButton"); for (var i = 0; i < 6; i++) Click(skip, "SkipButton");
-                Check(skippedCredit == 0, "Skipped activity credited"); skip.Close();
+                Check(skippedCredit == 0 && skip.SessionRing.Value == 0 && skip.CompletionSymbol.Text != "\uE8FB", "Skipped activity displayed as complete"); Capture(skip, "23-incomplete"); skip.Close();
                 var forced = new BreakWindow(BreakKind.Movement, true, true, TimeSpan.FromMinutes(60), false, strict: true, neck: true);
                 windows.Add(forced); var forcedCredit = 0; forced.Completed += _ => forcedCredit++; forced.Show();
                 Check(forced.IsRunning && forced.ShowActivated, "Strict break did not start on show");
@@ -128,6 +129,7 @@ internal static class SmokeTest
                 Check(forcedCredit == 1 && !forced.IsVisible, "Strict completion did not release window once");
                 var rest = new BreakWindow(BreakKind.Movement, true, true, TimeSpan.Zero, false, strict: true);
                 windows.Add(rest); rest.Show(); Click(rest, "AlternativeButton");
+                Check(rest.RoutePanel.Visibility == Visibility.Collapsed, "Alternative still prescribes movement");
                 Check(rest.Countdown.Text == "03:00", "Rest alternative shortened session"); Capture(rest, "16-strict-alternative");
                 var restCredit = 0; rest.Completed += s => { Check(s.RestOnly && !s.ActivityCompleted, "Alternative credited activity"); restCredit++; };
                 for (var i = 0; i < 180; i++) rest.Tick(TimeSpan.FromSeconds(1)); Check(restCredit == 1 && !rest.IsVisible, "Alternative did not finish");
@@ -171,6 +173,23 @@ internal static class SmokeTest
                 Click(integrated, "AlternativeButton"); for (var i = 0; i < 180; i++) integrated.Tick(TimeSpan.FromSeconds(1));
                 Check(dayBefore.MovementBreaks == bodyCount && dayBefore.EyeBreaks == eyeCount + 1, "Controller credited fallback as movement");
                 Check(app.Engine.Continuous > TimeSpan.Zero && app.Engine.SnoozeRemaining == TimeSpan.FromMinutes(5), "Fallback erased body exposure or failed to snooze");
+                Check(app.LastCompletion?.Contains("未计为身体活动") == true, "Fallback feedback claims body completion");
+                var saveCalls = 0; var finishedCalls = 0; var allowSave = false; Preferences? saved = null;
+                var welcome = new WelcomeWindow(new Preferences(), p => { saveCalls++; if (!allowSave) return false; saved = p; return true; }, () => "测试：保存失败，请重试。", () => finishedCalls++);
+                windows.Add(welcome); welcome.Show(); Capture(welcome, "24-welcome-rhythm");
+                Check(welcome.GentleMode.IsChecked == true && saveCalls == 0, "Welcome silently opts into strict or saves early");
+                welcome.DailyRhythm.IsChecked = true; Click(welcome, "NextButton");
+                welcome.StrictMode.IsChecked = true; welcome.SoundEnabled.IsChecked = false;
+                Capture(welcome, "25-welcome-mode"); Click(welcome, "BackButton");
+                Check(welcome.DailyRhythm.IsChecked == true && saveCalls == 0, "Back lost selection or saved");
+                Click(welcome, "NextButton"); Click(welcome, "NextButton"); Capture(welcome, "26-welcome-ready");
+                Click(welcome, "NextButton"); Check(welcome.IsVisible && saveCalls == 1 && finishedCalls == 0 && welcome.ErrorText.Text.Length > 0, "Failed onboarding save closed window");
+                welcome.Width = 680; welcome.Height = 580; Capture(welcome, "27-welcome-compact-error");
+                Check(welcome.ArtPanel.Visibility == Visibility.Collapsed && welcome.NextButton.IsVisible, "Compact onboarding hides save");
+                allowSave = true; Click(welcome, "NextButton");
+                Check(!welcome.IsVisible && finishedCalls == 1 && saved is { MovementIntervalMinutes: 50, StrictMode: true, SoundEnabled: false, OnboardingComplete: true }, "Onboarding retry failed");
+                var abandoned = new WelcomeWindow(new Preferences(), _ => throw new InvalidOperationException("Close saved onboarding"), () => null, () => throw new InvalidOperationException("Close finished onboarding"));
+                windows.Add(abandoned); abandoned.Show(); abandoned.Close();
                 File.WriteAllText(resultFile, "PASS: WPF views, layout, settings validation, reminder focus policy, pause, completion, skip, tray, input API, foreground detection");
             }
             catch (Exception error)
