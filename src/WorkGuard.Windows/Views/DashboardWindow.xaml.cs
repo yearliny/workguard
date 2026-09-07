@@ -33,8 +33,10 @@ public partial class DashboardWindow : Window
         TimingHint.Text = _app.Paused ? $"约 {Math.Ceiling(_app.PauseRemaining.TotalMinutes)} 分钟后自动恢复" :
             _app.Engine.SnoozeRemaining > TimeSpan.Zero ? $"提醒已推迟 {Math.Ceiling(_app.Engine.SnoozeRemaining.TotalMinutes)} 分钟" :
             _app.State.Preferences.EyeReminders ? $"下次远眺约 {Math.Ceiling(_app.Engine.EyeDueIn.TotalMinutes)} 分钟后" : "眼睛提醒已关闭";
+        if (_app.LastCompletion is not null) TimingHint.Text = _app.LastCompletion;
         ContinuousText.Text = ((int)_app.Engine.Continuous.TotalMinutes).ToString("00");
         NextText.Text = _app.Engine.MovementDueIn > TimeSpan.Zero ? $"约 {Math.Ceiling(_app.Engine.MovementDueIn.TotalMinutes)} 分钟后，起来走一走。" : "已经到了活动时间，给身体几分钟。";
+        if (!_app.State.Preferences.OnboardingComplete) NextText.Text = "先完成快速配置，开启适合你的休息提醒。";
         ActiveText.Text = Time(today.ActiveSeconds);
         LongestText.Text = $"{(int)(today.LongestSeconds / 60)} 分钟";
         BreaksText.Text = $"{today.MovementBreaks + today.OfficeBreaks} 次";
@@ -66,6 +68,7 @@ public partial class DashboardWindow : Window
     }
     private void Restore_Click(object sender, RoutedEventArgs e) => _app.RestoreBackup();
     private void Export_Click(object sender, RoutedEventArgs e) => _app.ExportCsv();
+    private void Welcome_Click(object sender, RoutedEventArgs e) => _app.ShowWelcome();
     private void Settings_Click(object sender, RoutedEventArgs e) => _app.ShowSettings();
     private void Movement_Click(object sender, RoutedEventArgs e) => _app.StartBreak(BreakKind.Movement);
     private void Eyes_Click(object sender, RoutedEventArgs e) => _app.StartBreak(BreakKind.Eyes);

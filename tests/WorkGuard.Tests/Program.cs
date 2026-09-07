@@ -4,6 +4,22 @@ using WorkGuard.Data;
 // Dependency-free deterministic behavior checks. Nonzero exit code fails CI.
 var tests = new (string Name, Action Run)[]
 {
+    ("Quick setup preserves advanced preferences and custom rhythm", () =>
+    {
+        var initial = new Preferences { EyeIntervalMinutes = 35, MovementIntervalMinutes = 85, EyeReminders = false,
+            StrictEyes = false, NeckMovements = true, ReduceMotion = true, QuietHoursEnabled = true, StartWithWindows = true };
+        var result = new QuickSetup(null, true, false).ApplyTo(initial);
+        True(result == initial with { StrictMode = true, SoundEnabled = false, OnboardingComplete = true });
+    }),
+    ("Quick setup presets do not silently enable strict mode or eye reminders", () =>
+    {
+        foreach (var minutes in new[] { 50, 60 })
+        {
+            var result = new QuickSetup(minutes, false, true).ApplyTo(new Preferences { EyeReminders = false });
+            True(result.MovementIntervalMinutes == minutes && result.EyeIntervalMinutes == 20);
+            True(!result.StrictMode && !result.EyeReminders && result.OnboardingComplete);
+        }
+    }),
     ("Reduce motion preference persists and defaults to normal", () => WithDirectory(path =>
     {
         var store = new LocalStore(path); var state = store.Load(); True(!state.Preferences.ReduceMotion);

@@ -25,7 +25,7 @@
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
           <StackPanel x:Name="SceneContent" MaxWidth="520" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="12,12" ui:Motion.Enter="True">
             <Border CornerRadius="20" Background="#DDE7DA" Padding="14,7" HorizontalAlignment="Center" Margin="0,0,0,14"><TextBlock x:Name="Eyebrow" Text="先放下手头的事" TextAlignment="Center" FontSize="12" Foreground="{StaticResource AccentBrush}"/></Border>
-            <Border x:Name="StateBadge" Style="{StaticResource IconBadge}" Width="52" Height="52" CornerRadius="16" HorizontalAlignment="Center" Margin="0,6" Visibility="Collapsed"><ui:Symbol Text="&#xE8FB;" FontSize="26" Foreground="{StaticResource AccentBrush}"/></Border>
+            <Border x:Name="StateBadge" Style="{StaticResource IconBadge}" Width="52" Height="52" CornerRadius="16" HorizontalAlignment="Center" Margin="0,6" Visibility="Collapsed"><ui:Symbol x:Name="CompletionSymbol" Text="&#xE8FB;" FontSize="26" Foreground="{StaticResource AccentBrush}"/></Border>
             <TextBlock x:Name="Heading" Text="身体需要活动一下" FontSize="34" FontWeight="SemiBold" TextAlignment="Center" Margin="0,0,0,12"/>
             <TextBlock x:Name="Instruction" FontSize="16" TextAlignment="Center" LineHeight="26" Margin="0,0,0,16"/>
             <Grid x:Name="TimerFace" Width="204" Height="204" Margin="0,4,0,14">
@@ -41,7 +41,15 @@
           <Border x:Name="SceneryFrame" CornerRadius="180,180,28,28" Background="Transparent"/>
           <ui:SceneImage x:Name="RestArt" Source="{StaticResource SanctuaryArt}" CornerRadius="28"/>
           <Border Background="#EEFBFAF5" CornerRadius="18" Padding="20,16" Margin="20" VerticalAlignment="Bottom">
-            <StackPanel><TextBlock x:Name="SceneName" Text="此刻，无需赶路" FontSize="20" FontWeight="SemiBold"/><TextBlock x:Name="SceneNote" Text="远处的风景，值得抬头看看。" Foreground="{StaticResource MutedBrush}" FontSize="13" Margin="0,8,0,0"/></StackPanel>
+            <StackPanel><TextBlock x:Name="SceneName" Text="此刻，无需赶路" FontSize="20" FontWeight="SemiBold"/><TextBlock x:Name="SceneNote" Text="远处的风景，值得抬头看看。" Foreground="{StaticResource MutedBrush}" FontSize="13" Margin="0,8,0,0"/>
+              <StackPanel x:Name="RoutePanel" Margin="0,16,0,0">
+                <Border Background="#D6DED1" Height="1" Margin="0,0,0,12"/>
+                <TextBlock x:Name="RouteHeading" Text="这次的活动" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,6"/>
+                <ItemsControl x:Name="RouteItems" Focusable="False"><ItemsControl.ItemTemplate><DataTemplate>
+                  <DockPanel Margin="0,5"><TextBlock Text="{Binding Duration}" DockPanel.Dock="Right" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="12,0,0,0"/><TextBlock Text="{Binding Title}" FontSize="13" FontWeight="{Binding Weight}"/></DockPanel>
+                </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+              </StackPanel>
+            </StackPanel>
           </Border>
         </Grid>
       </Grid>

@@ -1,0 +1,37 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:ui="clr-namespace:WorkGuard.Windows.Views" x:Class="WorkGuard.Windows.Views.WelcomeWindow" Style="{StaticResource AppWindow}" Title="工作防沉迷 · 快速开始" Width="860" Height="700" MinWidth="680" MinHeight="580" WindowStartupLocation="CenterScreen">
+ <Window.Resources>
+  <Style x:Key="Choice" TargetType="RadioButton">
+   <Setter Property="Margin" Value="0,6"/><Setter Property="Padding" Value="16,12"/><Setter Property="Cursor" Value="Hand"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RadioButton"><Border x:Name="ChoiceBorder" Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="16" Padding="{TemplateBinding Padding}"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="24"/></Grid.ColumnDefinitions><ContentPresenter VerticalAlignment="Center" RecognizesAccessKey="True"/><ui:Symbol x:Name="Checkmark" Grid.Column="1" Text="&#xE8FB;" Foreground="{StaticResource AccentBrush}" Visibility="Collapsed"/></Grid></Border><ControlTemplate.Triggers><Trigger Property="IsChecked" Value="True"><Setter TargetName="ChoiceBorder" Property="Background" Value="#E6EEE2"/><Setter TargetName="ChoiceBorder" Property="BorderBrush" Value="{StaticResource AccentBrush}"/><Setter TargetName="Checkmark" Property="Visibility" Value="Visible"/></Trigger><Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="ChoiceBorder" Property="BorderBrush" Value="{StaticResource InkBrush}"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+  </Style>
+ </Window.Resources>
+ <Grid Margin="24" ui:Motion.Enter="True">
+  <Grid.ColumnDefinitions><ColumnDefinition x:Name="ArtColumn" Width="0.65*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+  <Grid x:Name="ArtPanel" Margin="0,0,24,0"><ui:SceneImage Source="{StaticResource SanctuaryArt}" CornerRadius="24"/><Border VerticalAlignment="Bottom" Background="#EDF8F7F1" CornerRadius="18" Margin="16" Padding="20"><StackPanel><TextBlock Text="把片刻，&#10;留给自己。" FontSize="28" FontWeight="SemiBold"/><TextBlock Text="无需账户，也无需改变你的工作方式。" FontSize="13" Foreground="{StaticResource MutedBrush}" Margin="0,12,0,0"/></StackPanel></Border></Grid>
+  <DockPanel Grid.Column="1">
+   <StackPanel DockPanel.Dock="Top" Margin="0,8,0,20"><TextBlock Text="工作防沉迷 / 快速开始" Foreground="{StaticResource MutedBrush}" FontSize="12"/><TextBlock x:Name="PageTitle" Text="选一个舒服的节奏" FontSize="27" FontWeight="SemiBold" Margin="0,14,0,8"/><TextBlock x:Name="PageHint" Foreground="{StaticResource MutedBrush}" LineHeight="23"/></StackPanel>
+   <StackPanel DockPanel.Dock="Bottom" Margin="0,14,0,0"><TextBlock x:Name="ErrorText" Foreground="#9B382E" AutomationProperties.LiveSetting="Polite" Margin="0,0,0,8"/><DockPanel><Button x:Name="NextButton" DockPanel.Dock="Right" Content="下一步" Style="{StaticResource PrimaryButton}" Click="Next_Click" Margin="8,0,0,0"/><Button x:Name="BackButton" Content="上一步" Click="Back_Click" HorizontalAlignment="Left" Background="Transparent"/></DockPanel><TextBlock x:Name="StepText" TextAlignment="Center" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,18,0,0"/></StackPanel>
+   <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <Grid x:Name="Pages">
+     <StackPanel x:Name="RhythmPage">
+      <RadioButton x:Name="KeepRhythm" GroupName="Rhythm" Style="{StaticResource Choice}" AutomationProperties.Name="保留当前休息节奏"><StackPanel><TextBlock Text="沿用当前节奏" FontWeight="SemiBold"/><TextBlock x:Name="CurrentRhythmText" FontSize="13" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,0"/></StackPanel></RadioButton>
+      <RadioButton x:Name="DailyRhythm" GroupName="Rhythm" Style="{StaticResource Choice}" AutomationProperties.Name="日常节奏，20 和 50 分钟"><StackPanel><TextBlock Text="日常节奏" FontWeight="SemiBold"/><TextBlock Text="每 20 分钟远眺 · 每 50 分钟活动" FontSize="13" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,0"/></StackPanel></RadioButton>
+      <RadioButton x:Name="FocusRhythm" GroupName="Rhythm" Style="{StaticResource Choice}" AutomationProperties.Name="专注节奏，20 和 60 分钟"><StackPanel><TextBlock Text="专注节奏" FontWeight="SemiBold"/><TextBlock Text="每 20 分钟远眺 · 每 60 分钟活动" FontSize="13" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,0"/></StackPanel></RadioButton>
+      <TextBlock Text="远眺 20 秒，身体活动 3 分钟。周期之后可以随时调整。" Foreground="{StaticResource MutedBrush}" FontSize="13" Margin="0,14,0,0"/>
+     </StackPanel>
+     <StackPanel x:Name="ModePage" Visibility="Collapsed">
+      <RadioButton x:Name="GentleMode" GroupName="Mode" Style="{StaticResource Choice}" AutomationProperties.Name="温和提醒"><StackPanel><TextBlock Text="温和提醒" FontWeight="SemiBold"/><TextBlock Text="先在角落轻轻出现，准备好后再开始。" FontSize="13" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,0"/></StackPanel></RadioButton>
+      <RadioButton x:Name="StrictMode" GroupName="Mode" Style="{StaticResource Choice}" AutomationProperties.Name="强制全屏休息"><StackPanel><TextBlock Text="需要一点约束" FontWeight="SemiBold"/><TextBlock Text="到点直接全屏，倒计时内不能普通跳过。" FontSize="13" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,0"/></StackPanel></RadioButton>
+      <TextBlock Text="强制模式保留紧急退出；会议、安静时段和全屏静默设置仍然有效。动作不适时可以改为安静休息。" Foreground="{StaticResource MutedBrush}" FontSize="13" Margin="0,12,0,0"/>
+      <CheckBox x:Name="SoundEnabled" Content="动作切换与结束时播放轻提示音" Margin="0,24,0,10"/>
+     </StackPanel>
+     <StackPanel x:Name="ReadyPage" Visibility="Collapsed">
+      <Border Style="{StaticResource Card}" Padding="20"><StackPanel><TextBlock Text="你的休息安排" FontSize="18" FontWeight="SemiBold"/><TextBlock x:Name="ScheduleText" LineHeight="28" Margin="0,12,0,0"/><TextBlock x:Name="ModeText" Foreground="{StaticResource MutedBrush}" LineHeight="24" Margin="0,12,0,0"/></StackPanel></Border>
+      <TextBlock Text="开始后，程序会留在系统托盘。关闭概览不会退出；需要时可从托盘重新打开，或暂停提醒。" Foreground="{StaticResource MutedBrush}" LineHeight="24" Margin="0,18,0,0"/>
+      <TextBlock Text="只在本机保存设置和统计，不记录你输入的内容。" Foreground="{StaticResource MutedBrush}" FontSize="13" Margin="0,14,0,0"/>
+     </StackPanel>
+    </Grid>
+   </ScrollViewer>
+  </DockPanel>
+ </Grid>
+</Window>

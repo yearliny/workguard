@@ -13,6 +13,7 @@ public partial class BreakWindow : Window
     private RestScene? _lastScene;
     public bool IsStrict => _strict;
     private int _lastIndex;
+    private int _routeIndex = -1;
     private bool _started;
     private bool _finishing;
     public bool HasStarted => _started;
@@ -77,6 +78,7 @@ public partial class BreakWindow : Window
             foreach (var cover in _covers) cover.Release();
             _covers.Clear(); Ended?.Invoke(_session);
         };
+        RenderRoute();
         SizeChanged += (_, _) => FitScene();
         StateChanged += (_, _) => { if (WindowState == WindowState.Minimized) PauseForInterruption(); };
     }
@@ -87,6 +89,7 @@ public partial class BreakWindow : Window
     {
         if (_started) return;
         _started = true;
+        _routeIndex = -1;
         RestArt.Visibility = Visibility.Visible;
         StateBadge.Visibility = Visibility.Collapsed;
         NextStep.Visibility = StepLabel.Visibility = Visibility.Visible;
@@ -153,7 +156,11 @@ public partial class BreakWindow : Window
             RestArt.Visibility = Visibility.Visible;
             StateBadge.Visibility = Visibility.Visible;
             Countdown.FontSize = 44;
-            SessionRing.Value = 1;
+            SessionRing.Value = _session.Observed.TotalSeconds / Programs.Duration(_session.Kind).TotalSeconds;
+            CompletionSymbol.Text = _session.FullyCompleted ? "\uE8FB" : "\uE823";
+            RoutePanel.Visibility = Visibility.Collapsed;
+            SceneName.Text = _session.FullyCompleted ? "休息结束，节奏继续" : "按照自己的节奏来";
+            SceneNote.Text = "每一次停下来，都可以从容一些。";
             TimerCaption.Text = "已留给自己的时间";
             Motion.Reveal(SceneContent);
             NextStep.Visibility = Visibility.Collapsed;
@@ -165,10 +172,11 @@ public partial class BreakWindow : Window
             PauseButton.Visibility = SkipButton.Visibility = Visibility.Collapsed;
             SnoozeButton.Content = "回到工作";
             SnoozeButton.Visibility = Visibility.Visible;
-            Progress.Value = 100;
+            Progress.Value = SessionRing.Value * 100;
             StepLabel.Text = "不必追求打卡，舒服地活动就好。";
             return;
         }
+        RenderRoute();
         var exercise = _session.Current;
         Eyebrow.Text = _session.Paused ? "已暂停 · 准备好后继续" : _strict ? "强制休息中 · 这段时间留给自己" : "给身体一点空间";
         Heading.Text = _session.RestOnly ? "现在，安静休息一下" : exercise.Title;
@@ -195,6 +203,20 @@ public partial class BreakWindow : Window
             ? $"{_session.Index + 1} / {_session.Exercises.Count} · 还有 {Math.Ceiling((Programs.Duration(_session.Kind) - _session.Observed).TotalSeconds)} 秒自动返回"
             : $"{_session.Index + 1} / {_session.Exercises.Count} · 已活动 {(int)_session.Observed.TotalSeconds} 秒";
         foreach (var cover in _covers) cover.Update(Heading.Text, StepLabel.Text, Background);
+    }
+
+    private void RenderRoute()
+    {
+        RoutePanel.Visibility = _session.Kind == BreakKind.Eyes || _session.RestOnly || _session.Finished ? Visibility.Collapsed : Visibility.Visible;
+        if (_routeIndex == _session.Index) return;
+        _routeIndex = _session.Index;
+        RouteHeading.Text = _started ? "此刻与接下来" : "活动预告 · 前三个环节";
+        RouteItems.ItemsSource = _session.Exercises.Skip(_session.Index).Take(3).Select((exercise, index) => new
+        {
+            Title = (_started && index == 0 ? "现在 · " : "") + exercise.Title,
+            Duration = $"{exercise.Seconds} 秒",
+            Weight = _started && index == 0 ? FontWeights.SemiBold : FontWeights.Normal
+        }).ToArray();
     }
 
     private void FitScene()

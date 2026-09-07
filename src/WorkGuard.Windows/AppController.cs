@@ -34,6 +34,10 @@ internal sealed class AppController : IDisposable
     private TrayIcon? _tray;
     private DashboardWindow? _dashboard;
     private SettingsWindow? _settings;
+    private WelcomeWindow? _welcome;
+    private string? _lastCompletion;
+    private TimeSpan _completionUntil;
+    public string? LastCompletion => _clock.Elapsed < _completionUntil ? _lastCompletion : null;
     private BreakWindow? _break;
     private ReminderWindow? _reminder;
     private int _eyeVariant, _bodyVariant;
@@ -57,8 +61,8 @@ internal sealed class AppController : IDisposable
         _lastTick = _clock.Elapsed;
         _timer.Tick += Tick;
         _timer.Start();
-        if (!State.Preferences.OnboardingComplete) ShowSettings();
         if (DataError is not null) ShowDashboard();
+        else if (!State.Preferences.OnboardingComplete) ShowWelcome();
     }
 
     private void Tick(object? sender, EventArgs e)
@@ -87,7 +91,7 @@ internal sealed class AppController : IDisposable
         else
         {
             var idle = WindowsActivity.IdleAge();
-            var quiet = Paused || MeetingMode || QuietHoursActive || quietFullscreen || _break is not null || _reminder is not null || _settings is not null;
+            var quiet = Paused || MeetingMode || QuietHoursActive || quietFullscreen || _break is not null || _reminder is not null || _settings is not null || _welcome is not null || !State.Preferences.OnboardingComplete;
             // Unavailable idle API disables inference; it must never imply absence.
             var result = Engine.Advance(elapsed, new(idle ?? TimeSpan.Zero, Quiet: quiet,
                 KeepCountingWithoutInput: MeetingMode || quietFullscreen || idle is null));
@@ -95,7 +99,7 @@ internal sealed class AppController : IDisposable
                 idle >= TimeSpan.FromMinutes(State.Preferences.NaturalRestMinutes) && _break is { HasStarted: false })
                 _break.Close();
             if (State.Preferences.InferNaturalRest && !MeetingMode && !quietFullscreen && idle >= TimeSpan.FromMinutes(State.Preferences.NaturalRestMinutes)) DismissReminder();
-            Status = QuietHoursActive ? "安静时段 · 计时继续" : MeetingMode ? "会议模式 · 静默计时" : Paused ? "提醒已暂停 · 计时继续" :
+            Status = !State.Preferences.OnboardingComplete ? "完成快速配置后开启提醒" : QuietHoursActive ? "安静时段 · 计时继续" : MeetingMode ? "会议模式 · 静默计时" : Paused ? "提醒已暂停 · 计时继续" :
                 quietFullscreen ? "全屏应用 · 静默计时" :
                 idle is null ? "无法读取空闲状态 · 按用屏时间估计" :
                 State.Preferences.InferNaturalRest && idle >= TimeSpan.FromMinutes(1) ? "暂未检测到输入 · 可能正在离席" : "正在工作 · 记得变换姿势";
@@ -145,6 +149,8 @@ internal sealed class AppController : IDisposable
                 else if (session.Kind == BreakKind.Movement) day.MovementBreaks++;
                 else day.OfficeBreaks++;
                 if (session.RestOnly) Engine.Snooze(TimeSpan.FromMinutes(5));
+                _completionUntil = _clock.Elapsed + TimeSpan.FromMinutes(2);
+                _lastCompletion = $"{DateTime.Now:HH:mm} · " + (session.RestOnly ? "安静休息已完成，未计为身体活动。" : session.Kind == BreakKind.Eyes ? "完成一次眼睛休息。" : "完成一次身体活动，带着轻松继续。");
                 Save();
             }
         };
@@ -169,8 +175,19 @@ internal sealed class AppController : IDisposable
         _dashboard.Show();
     }
 
+    public void ShowWelcome()
+    {
+        if (_welcome is not null) { _welcome.Activate(); return; }
+        if (_settings is not null) { _settings.Activate(); return; }
+        DismissReminder();
+        _welcome = new WelcomeWindow(State.Preferences, ApplyPreferences, () => DataError, ShowDashboard);
+        _welcome.Closed += (_, _) => { _welcome = null; Changed?.Invoke(); };
+        _welcome.Show();
+    }
+
     public void ShowSettings()
     {
+        if (_welcome is not null) { _welcome.Activate(); return; }
         if (_settings is not null) { _settings.Activate(); return; }
         _settings = new SettingsWindow(this);
         _settings.Closed += (_, _) => _settings = null;
