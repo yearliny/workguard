@@ -55,6 +55,8 @@
             <TextBlock Text="身体活动到点直接全屏开始 3 分钟，覆盖连接的显示器。不能普通跳过、暂停或推迟；完成后自动回到工作。" Foreground="{StaticResource MutedBrush}"/>
             <CheckBox x:Name="ForceEyes" Content="眼睛休息也强制全屏 · 20 秒"/>
             <TextBlock Text="关闭这一项，眼睛休息仍使用轻提醒。眼睛提醒总开关位于「休息节奏」。" Foreground="{StaticResource MutedBrush}"/>
+            <Button x:Name="PreviewStrict" Content="体验 20 秒强制全屏" HorizontalAlignment="Left" Style="{StaticResource PrimaryButton}" Click="PreviewStrict_Click"/>
+            <TextBlock Text="立即体验；不会保存或更改上述设置。" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0"/>
             <Separator Margin="0,18"/>
             <CheckBox x:Name="Neck" Content="身体活动中加入温和转头"/>
             <TextBlock Text="默认关闭。仅在转头舒适、没有活动限制时开启；有颈部疾病、受伤或恢复期请遵循专业建议。不绕颈、不压头、不追求幅度。" Foreground="{StaticResource MutedBrush}"/>
@@ -65,8 +67,7 @@
                 <TextBlock Text="会议模式、安静时段和全屏静默设置仍然有效。系统快捷键与 Windows 锁屏始终可用。" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0"/>
               </StackPanel>
             </Border>
-            <Button x:Name="PreviewStrict" Content="体验 20 秒强制全屏" HorizontalAlignment="Left" Style="{StaticResource PrimaryButton}" Click="PreviewStrict_Click"/>
-            <TextBlock Text="立即体验；不会保存或更改上述设置。" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0"/>
+
           </StackPanel>
         </ScrollViewer>
       </TabItem>

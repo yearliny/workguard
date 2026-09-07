@@ -174,6 +174,7 @@ public partial class BreakWindow : Window
         if (_lastIndex != _session.Index && _sound && !_session.RestOnly) System.Media.SystemSounds.Asterisk.Play();
         _lastIndex = _session.Index;
         NextStep.Text = _session.Index + 1 < _session.Exercises.Count ? "接下来 · " + _session.Exercises[_session.Index + 1].Title : "这是最后一个动作";
+        if (_strict && _session.Kind == BreakKind.Eyes) NextStep.Text = "不必盯着屏幕 · 结束时自动返回";
         if (_session.RestOnly) NextStep.Text = "无需继续动作 · 安静休息不记为完整身体活动";
         Countdown.Text = TimeSpan.FromSeconds(Math.Ceiling((_session.RestOnly
             ? Programs.Duration(_session.Kind) - _session.Observed : _session.Remaining).TotalSeconds)).ToString(@"mm\:ss");
