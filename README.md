@@ -6,9 +6,17 @@
 
 ## 下载试用
 
-[下载 Windows x64 便携包](https://github.com/yearliny/workguard/actions/runs/34078387890/artifacts/10002885588) · [已通过的 Windows CI](https://github.com/yearliny/workguard/actions/runs/34078387890) · [验证记录](docs/VERIFICATION.md)
+[GitHub Releases 下载](https://github.com/yearliny/workguard/releases) · [自动构建](https://github.com/yearliny/workguard/actions) · [验证记录](docs/VERIFICATION.md)
 
-需要登录具有仓库访问权限的 GitHub 账户。解压至包含 `WorkGuard.exe` 的完整目录后运行，无需另装 .NET。此构建产物保留 30 天；过期后可在 Actions 手动重新构建。
+| 文件 | 适合谁 | 运行条件 |
+| --- | --- | --- |
+| `WorkGuard-版本-win-x64-portable.zip` | 想解压即用 | 自带 .NET 桌面运行时，包体积较大 |
+| `WorkGuard-版本-win-x64-lite.zip` | 已安装或愿意安装运行时 | 需要 [.NET 10 Desktop Runtime x64](https://dotnet.microsoft.com/download/dotnet/10.0) |
+| `SHA256SUMS-win-x64.txt` | 校验下载文件 | 两个 ZIP 的 SHA-256 |
+
+两种版本功能相同。请完整解压到目录后运行 `WorkGuard.exe`，不要只复制 exe。Windows 自带的 .NET Framework 不能替代 .NET 10 Desktop Runtime。
+
+仓库目前为私有，需要登录具有仓库访问权限的 GitHub 账户。Releases 的文件不受 Actions 构建产物的 30 天保留策略限制；删除 Release 或资产仍会使下载失效。
 
 ## 已实现
 
@@ -27,7 +35,7 @@
 
 目标平台：Windows 11 x64。ARM64 可自行构建，尚未实际验收。Windows 10 不作为当前验收目标。
 
-便携版：解压整个 `WorkGuard-0.1.0-win-x64.zip`，运行其中的 `WorkGuard.exe`。不要只移动 exe，其他文件也需要保留。便携版包含 .NET 运行时，不需要另行安装。首版尚无代码签名，Windows 可能显示未知发布者提示。
+便携版：解压整个 `WorkGuard-0.1.0-win-x64-portable.zip`，运行其中的 `WorkGuard.exe`。不要只移动 exe，其他文件也需要保留。便携版包含 .NET 运行时，不需要另行安装。首版尚无代码签名，Windows 可能显示未知发布者提示。
 
 首次启动显示设置，点击“保存并开始”后从系统托盘使用。系统托盘图标可能在折叠菜单中。建议先手动尝试 20 秒、3 分钟、7 分钟流程。
 
@@ -46,11 +54,14 @@ dotnet build WorkGuard.slnx -c Release
 ./scripts/smoke-windows.ps1
 ./scripts/publish.ps1
 
+# 只构建需要预装运行时的精简版
+./scripts/publish.ps1 -Mode lite
+
 # ARM64 构建（需要在 ARM64 机器上验收）
 ./scripts/publish.ps1 -Runtime win-arm64
 ```
 
-每次推送 `main` 或打开 PR 都会运行 CI。构建成功后，在 Actions 对应运行的 Artifacts 下载便携包。CI 不自动发布公开 Release。
+每次推送 `main` 或打开 PR 都会运行 CI。构建成功后，在 Actions 对应运行的 Artifacts 下载便携包。CI 在测试、两种 Windows 包启动检查通过后，按项目 Version 自动发布预发布版到 Releases，保持仓库现有可见性。同版本已发布后不会覆盖；发布下一版需要提升项目 Version。
 
 ## 计时规则：避免错误的“休息信用”
 

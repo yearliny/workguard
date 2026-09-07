@@ -26,6 +26,8 @@ jobs:
   windows:
     needs: core
     runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -36,15 +38,44 @@ jobs:
       - name: Load real Windows views and native integration
         shell: pwsh
         run: ./scripts/smoke-windows.ps1
-      - name: Package portable Windows x64 app with runtime
+      - name: Read application version
+        id: version
+        shell: pwsh
+        run: |
+          $version = ([xml](Get-Content src/WorkGuard.Windows/WorkGuard.Windows.csproj -Raw)).Project.PropertyGroup.Version
+          if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') { throw 'Invalid application version.' }
+          "version=$version" >> $env:GITHUB_OUTPUT
+      - name: Package portable and lightweight Windows apps
         shell: pwsh
         run: ./scripts/publish.ps1 -Runtime win-x64 -SkipTests
-      - name: Verify packaged application
+      - name: Verify both packaged applications
         shell: pwsh
-        run: ./scripts/smoke-windows.ps1 -Executable ./artifacts/publish/win-x64/WorkGuard.exe
+        run: |
+          ./scripts/smoke-windows.ps1 -Executable ./artifacts/publish/win-x64/portable/WorkGuard.exe
+          ./scripts/smoke-windows.ps1 -Executable ./artifacts/publish/win-x64/lite/WorkGuard.exe
       - uses: actions/upload-artifact@v4
         with:
-          name: WorkGuard-0.1.0-win-x64
-          path: artifacts/WorkGuard-0.1.0-win-x64.zip
+          name: WorkGuard-${{ steps.version.outputs.version }}-win-x64
+          path: |
+            artifacts/WorkGuard-${{ steps.version.outputs.version }}-win-x64-*.zip
+            artifacts/SHA256SUMS-win-x64.txt
           if-no-files-found: error
           retention-days: 30
+  release:
+    needs: windows
+    if: (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: WorkGuard-${{ needs.windows.outputs.version }}-win-x64
+          path: artifacts
+      - name: Publish a new version after all checks pass
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ needs.windows.outputs.version }}
+        run: ./scripts/release.ps1 -Repository $env:GITHUB_REPOSITORY -Commit $env:GITHUB_SHA -Version $env:RELEASE_VERSION
