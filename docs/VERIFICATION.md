@@ -1,3 +1,14 @@
+# 0.3.0 视觉更新验证
+
+- [改进 PR #2](https://github.com/yearliny/workguard/pull/2)：离线插画、原生图标、设置控件与活动布局。
+- Windows 原生截图已检查，见 [今日概览](images/dashboard-v0.3.png)；图片使用 CI 演示数据。
+- 原生检查验证内嵌插画可加载、解码宽度受限、当前图标字体包含所有使用的字形，以及设置校验、暂停、完成和跳过交互。
+- 35 项核心行为测试通过；Windows 编译通过。打包已改为显式指定项目，忽略 WPF 临时项目文件。
+- 合并后 CI 重新检查并自动发布精简包，结果见 [v0.3.0 Releases](https://github.com/yearliny/workguard/releases/tag/v0.3.0)。
+- 沿用下列实机验收边界：没有代码签名，尚需 Win10 / Win11、多屏、混合 DPI 与辅助技术实测；保持预发布标记。
+
+---
+
 # 0.2.0 验证记录
 
 - 改进记录：[PR #1](https://github.com/yearliny/workguard/pull/1)。

@@ -8,11 +8,12 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>WorkGuard</AssemblyName>
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
     <Product>工作防沉迷</Product>
     <Description>让休息自然发生的 Windows 桌面工具</Description>
   </PropertyGroup>
   <ItemGroup>
+    <Resource Include="Assets/*.png" />
     <ProjectReference Include="../WorkGuard.Core/WorkGuard.Core.csproj" />
     <ProjectReference Include="../WorkGuard.Data/WorkGuard.Data.csproj" />
   </ItemGroup>
