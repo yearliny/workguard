@@ -4,6 +4,57 @@ using WorkGuard.Data;
 // Dependency-free deterministic behavior checks. Nonzero exit code fails CI.
 var tests = new (string Name, Action Run)[]
 {
+    ("Strict scope is opt-in and never forces office training", () =>
+    {
+        var p = new Preferences(); True(!p.ShouldForce(BreakKind.Movement));
+        p = p with { StrictMode = true }; True(p.ShouldForce(BreakKind.Movement)); True(p.ShouldForce(BreakKind.Eyes));
+        True(!p.ShouldForce(BreakKind.Office)); True(!(p with { StrictEyes = false }).ShouldForce(BreakKind.Eyes));
+        True(!(p with { EyeReminders = false }).ShouldForce(BreakKind.Eyes));
+    }),
+    ("Strict settings survive restart and old installs stay gentle", () => WithDirectory(path =>
+    {
+        var store = new LocalStore(path); var state = store.Load(); True(!state.Preferences.StrictMode);
+        state.Preferences = state.Preferences with { StrictMode = true, StrictEyes = false, NeckMovements = true };
+        store.Save(state); var p = new LocalStore(path).Load().Preferences;
+        True(p.StrictMode && !p.StrictEyes && p.NeckMovements);
+    })),
+    ("Strict sessions reject skip and require every second", () =>
+    {
+        var s = new BreakSession(BreakKind.Movement, true, strict: true);
+        s.Advance(Seconds(10)); s.Skip(); Equal(0, s.Index); Equal(Seconds(10), s.Observed);
+        for (var i = 0; i < 169; i++) s.Advance(Seconds(1));
+        True(!s.Finished); s.Skip(); True(!s.Finished); s.Advance(Seconds(1)); True(s.ActivityCompleted);
+    }),
+    ("Rest alternative preserves duration without awarding activity", () =>
+    {
+        var s = new BreakSession(BreakKind.Movement, true, strict: true);
+        s.Advance(Seconds(10)); s.UseRestAlternative(); s.UseRestAlternative();
+        Equal(Seconds(10), s.Observed); Equal(0, s.Index);
+        for (var i = 0; i < 170; i++) s.Advance(Seconds(1));
+        True(s.FullyCompleted && s.RestOnly && !s.ActivityCompleted);
+    }),
+    ("Strict interrupted sessions do not advance or gain credit", () =>
+    {
+        var s = new BreakSession(BreakKind.Eyes, true, strict: true);
+        s.Advance(Seconds(600)); s.Paused = true; s.Advance(Seconds(10));
+        Equal(TimeSpan.Zero, s.Observed); True(!s.FullyCompleted);
+        s.Paused = false; s.Advance(Seconds(10)); True(!s.FullyCompleted);
+    }),
+    ("Strict delivery respects quiet time and natural absence", () =>
+    {
+        var e = new BreakEngine(new Preferences { StrictMode = true }); Work(e, 3600, quiet: true);
+        Equal(Reminder.None, e.Advance(Seconds(1), Active(true)));
+        Equal(Reminder.Movement, e.Advance(Seconds(1), Active()));
+        e.Advance(Seconds(1), new(Seconds(300))); Equal(TimeSpan.Zero, e.Continuous);
+    }),
+    ("Every scene variant preserves duration and neck is optional", () =>
+    {
+        foreach (var kind in Enum.GetValues<BreakKind>()) foreach (var gentle in new[] { true, false })
+        foreach (var neck in new[] { true, false }) foreach (var variant in new[] { 0, 1, 2, int.MaxValue })
+            Equal(Programs.Duration(kind), Seconds(Programs.For(kind, gentle, variant, neck).Sum(x => x.Seconds)));
+        True(!Programs.For(BreakKind.Movement, true).Any(x => x.Title.Contains("两侧")));
+        True(Programs.For(BreakKind.Movement, true, neck: true).Any(x => x.Title.Contains("两侧")));
+    }),
     ("Quiet hours include start and exclude end", () =>
     {
         var p = new Preferences { QuietHoursEnabled = true, QuietStartMinute = 720, QuietEndMinute = 780 };

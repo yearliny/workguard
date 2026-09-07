@@ -7,6 +7,11 @@ public partial class BreakWindow : Window
 {
     private readonly BreakSession _session;
     private readonly bool _sound;
+    private readonly bool _strict;
+    private readonly List<RestCoverWindow> _covers = [];
+    private bool _allowClose;
+    private RestScene? _lastScene;
+    public bool IsStrict => _strict;
     private int _lastIndex;
     private bool _started;
     private bool _finishing;
@@ -16,12 +21,13 @@ public partial class BreakWindow : Window
     public event Action<BreakSession>? Ended;
     public event Action<BreakSession>? Completed;
 
-    public BreakWindow(BreakKind kind, bool gentle, bool automatic, TimeSpan continuous, bool sound = true)
+    public BreakWindow(BreakKind kind, bool gentle, bool automatic, TimeSpan continuous, bool sound = true, bool strict = false, int variant = 0, bool neck = false)
     {
         InitializeComponent();
-        _session = new BreakSession(kind, gentle);
+        _session = new BreakSession(kind, gentle, strict, variant, neck);
+        _strict = strict;
         _sound = sound;
-        ShowActivated = !automatic;
+        ShowActivated = strict || !automatic;
         if (kind == BreakKind.Eyes)
         {
             Width = 520; Height = 680;
@@ -40,8 +46,37 @@ public partial class BreakWindow : Window
         Eyebrow.Text = $"已连续工作约 {(int)continuous.TotalMinutes} 分钟";
         Countdown.Text = Programs.Duration(kind).ToString(@"mm\:ss");
         Progress.Visibility = Visibility.Collapsed;
-        Loaded += (_, _) => WindowPlacement.Place(this, false, kind == BreakKind.Eyes);
-        Closed += (_, _) => Ended?.Invoke(_session);
+        if (strict)
+        {
+            ExitButton.Content = "紧急退出 · Esc";
+            Footnote.Text = "休息结束会自动返回 · 不适请停止活动 · Esc 打开紧急退出";
+        }
+        Loaded += (_, _) =>
+        {
+            WindowPlacement.Place(this, strict, !strict && kind == BreakKind.Eyes);
+            if (strict)
+            {
+                BeginSession();
+                var primary = System.Windows.Forms.Screen.FromHandle(new System.Windows.Interop.WindowInteropHelper(this).Handle);
+                foreach (var screen in System.Windows.Forms.Screen.AllScreens)
+                {
+                    if (screen.DeviceName == primary.DeviceName) continue;
+                    var cover = new RestCoverWindow(screen, RequestExit) { Owner = this };
+                    _covers.Add(cover); cover.Show();
+                }
+                Render(); Activate();
+            }
+        };
+        Closing += (_, e) =>
+        {
+            if (_strict && !_allowClose && !_session.Finished) { e.Cancel = true; RequestExit(); }
+            else { foreach (var cover in _covers) cover.Release(); _covers.Clear(); }
+        };
+        Closed += (_, _) =>
+        {
+            foreach (var cover in _covers) cover.Release();
+            _covers.Clear(); Ended?.Invoke(_session);
+        };
         StateChanged += (_, _) => { if (WindowState == WindowState.Minimized) PauseForInterruption(); };
     }
 
@@ -55,14 +90,15 @@ public partial class BreakWindow : Window
         StateBadge.Visibility = Visibility.Visible;
         NextStep.Visibility = StepLabel.Visibility = Visibility.Visible;
         Countdown.FontSize = 76;
-        if (_session.Kind != BreakKind.Eyes) WindowPlacement.Place(this, true, false);
+        if (_strict || _session.Kind != BreakKind.Eyes) WindowPlacement.Place(this, true, false);
         StartButton.Visibility = Visibility.Collapsed;
         SnoozeButton.Visibility = Visibility.Collapsed;
-        PauseButton.Visibility = Visibility.Visible;
-        SkipButton.Visibility = _session.Kind == BreakKind.Eyes ? Visibility.Collapsed : Visibility.Visible;
+        PauseButton.Visibility = _strict ? Visibility.Collapsed : Visibility.Visible;
+        SkipButton.Visibility = _strict || _session.Kind == BreakKind.Eyes ? Visibility.Collapsed : Visibility.Visible;
+        AlternativeButton.Visibility = _strict && _session.Kind != BreakKind.Eyes ? Visibility.Visible : Visibility.Collapsed;
         Progress.Visibility = Visibility.Visible;
         Render();
-        PauseButton.Focus();
+        if (_strict) ExitButton.Focus(); else PauseButton.Focus();
     }
 
     public void Tick(TimeSpan elapsed) { _session.Advance(elapsed); Render(); }
@@ -72,12 +108,25 @@ public partial class BreakWindow : Window
         _session.Paused = true;
         Render();
     }
-    private void Pause_Click(object sender, RoutedEventArgs e) { _session.Paused = !_session.Paused; Render(); }
+    private void Pause_Click(object sender, RoutedEventArgs e)
+    { if (!_strict || _session.Paused) { _session.Paused = !_session.Paused; Render(); } }
     private void Skip_Click(object sender, RoutedEventArgs e) { _session.Skip(); Render(); }
-    private void Exit_Click(object sender, RoutedEventArgs e) => Close();
+    private void Exit_Click(object sender, RoutedEventArgs e) => RequestExit();
+    public void CloseForSystem() { _allowClose = true; Close(); }
+    private void RequestExit()
+    {
+        if (!_strict || _session.Finished) { Close(); return; }
+        EmergencyPanel.Visibility = Visibility.Visible;
+        Activate(); ContinueButton.Focus();
+    }
+    private void ConfirmExit_Click(object sender, RoutedEventArgs e) => CloseForSystem();
+    private void Continue_Click(object sender, RoutedEventArgs e)
+    { EmergencyPanel.Visibility = Visibility.Collapsed; ExitButton.Focus(); }
+    private void Alternative_Click(object sender, RoutedEventArgs e)
+    { _session.UseRestAlternative(); AlternativeButton.Visibility = Visibility.Collapsed; Render(); }
     private void Window_KeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Escape) { Close(); e.Handled = true; }
+        if (e.Key == Key.Escape) { RequestExit(); e.Handled = true; }
         else if (e.Key == Key.Space && e.OriginalSource is not System.Windows.Controls.Button)
         { if (!_started) Start_Click(sender, e); else if (!_session.Finished) Pause_Click(sender, e); e.Handled = true; }
     }
@@ -89,7 +138,7 @@ public partial class BreakWindow : Window
             if (_finishing) return;
             _finishing = true;
             if (_session.FullyCompleted) Completed?.Invoke(_session);
-            if (_session.Kind == BreakKind.Eyes)
+            if (_strict || _session.Kind == BreakKind.Eyes)
             {
                 if (_session.FullyCompleted && _sound) System.Media.SystemSounds.Asterisk.Play();
                 Close();
@@ -114,17 +163,45 @@ public partial class BreakWindow : Window
             return;
         }
         var exercise = _session.Current;
-        Eyebrow.Text = _session.Paused ? "已暂停 · 准备好后继续" : "给身体一点空间";
-        Heading.Text = exercise.Title;
-        Instruction.Text = exercise.Instruction;
-        if (_lastIndex != _session.Index && _sound) System.Media.SystemSounds.Asterisk.Play();
+        Eyebrow.Text = _session.Paused ? "已暂停 · 准备好后继续" : _strict ? "强制休息中 · 这段时间留给自己" : "给身体一点空间";
+        Heading.Text = _session.RestOnly ? "现在，安静休息一下" : exercise.Title;
+        Instruction.Text = _session.RestOnly ? "停止当前动作，选择舒适、有支撑的姿势。把目光移开屏幕，剩余时间继续休息。" : exercise.Instruction;
+        if (_strict)
+        {
+            ApplyScene(_session.RestOnly ? RestScene.Distance : exercise.Scene);
+            PauseButton.Visibility = _session.Paused ? Visibility.Visible : Visibility.Collapsed;
+        }
+        if (_lastIndex != _session.Index && _sound && !_session.RestOnly) System.Media.SystemSounds.Asterisk.Play();
         _lastIndex = _session.Index;
         NextStep.Text = _session.Index + 1 < _session.Exercises.Count ? "接下来 · " + _session.Exercises[_session.Index + 1].Title : "这是最后一个动作";
-        Countdown.Text = TimeSpan.FromSeconds(Math.Ceiling(_session.Remaining.TotalSeconds)).ToString(@"mm\:ss");
-        Progress.Value = 100 * _session.StepElapsed.TotalSeconds / exercise.Seconds;
+        if (_session.RestOnly) NextStep.Text = "无需继续动作 · 安静休息不记为完整身体活动";
+        Countdown.Text = TimeSpan.FromSeconds(Math.Ceiling((_session.RestOnly
+            ? Programs.Duration(_session.Kind) - _session.Observed : _session.Remaining).TotalSeconds)).ToString(@"mm\:ss");
+        Progress.Value = _session.RestOnly ? 100 * _session.Observed.TotalSeconds / Programs.Duration(_session.Kind).TotalSeconds : 100 * _session.StepElapsed.TotalSeconds / exercise.Seconds;
         PauseButton.Content = _session.Paused ? "继续" : "暂停";
         Visuals.SetGlyph(PauseButton, _session.Paused ? "\uE768" : "\uE769");
-        StepLabel.Text = $"{_session.Index + 1} / {_session.Exercises.Count} · 已活动 {(int)_session.Observed.TotalSeconds} 秒";
+        StepLabel.Text = _strict
+            ? $"{_session.Index + 1} / {_session.Exercises.Count} · 还有 {Math.Ceiling((Programs.Duration(_session.Kind) - _session.Observed).TotalSeconds)} 秒自动返回"
+            : $"{_session.Index + 1} / {_session.Exercises.Count} · 已活动 {(int)_session.Observed.TotalSeconds} 秒";
+        foreach (var cover in _covers) cover.Update(Heading.Text, StepLabel.Text, Background);
+    }
+
+    private void ApplyScene(RestScene scene)
+    {
+        if (_lastScene == scene) return;
+        _lastScene = scene;
+        var color = scene switch
+        {
+            RestScene.Distance => "#E9F1F5", RestScene.Shoulders => "#F7EDDF",
+            RestScene.Hands => "#EFEAF4", _ => "#EBF1E5"
+        };
+        Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(color));
+        RestArt.Source = (ImageSource)FindResource(scene == RestScene.Distance ? "WindowArt" : "WorkdayArt");
+        RestArt.Visibility = Visibility.Visible;
+        RestArt.Width = 240; RestArt.Height = 150;
+        StateBadge.Visibility = Visibility.Collapsed;
+        Heading.FontSize = 34;
+        Countdown.FontSize = 64;
     }
 
 }

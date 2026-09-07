@@ -14,6 +14,9 @@ public partial class SettingsWindow : Window
         EyeInterval.Text = p.EyeIntervalMinutes.ToString();
         MovementInterval.Text = p.MovementIntervalMinutes.ToString();
         NaturalRest.Text = p.NaturalRestMinutes.ToString();
+        Strict.IsChecked = p.StrictMode;
+        ForceEyes.IsChecked = p.StrictEyes;
+        Neck.IsChecked = p.NeckMovements;
         EyeEnabled.IsChecked = p.EyeReminders;
         InferRest.IsChecked = p.InferNaturalRest;
         QuietFullscreen.IsChecked = p.QuietWhenFullscreen;
@@ -41,6 +44,7 @@ public partial class SettingsWindow : Window
         { ValidationText.Text = "请填写有效且不同的开始与结束时间，例如 12:00 与 13:00。"; return; }
         var p = _app.State.Preferences with
         {
+            StrictMode = Strict.IsChecked == true, StrictEyes = ForceEyes.IsChecked == true, NeckMovements = Neck.IsChecked == true,
             EyeIntervalMinutes = eye, MovementIntervalMinutes = movement, NaturalRestMinutes = rest,
             EyeReminders = EyeEnabled.IsChecked == true, InferNaturalRest = InferRest.IsChecked == true,
             QuietWhenFullscreen = QuietFullscreen.IsChecked == true, StartWithWindows = Startup.IsChecked == true,
@@ -51,6 +55,7 @@ public partial class SettingsWindow : Window
         if (_app.ApplyPreferences(p)) Close();
         else ValidationText.Text = _app.DataError;
     }
+    private void PreviewStrict_Click(object sender, RoutedEventArgs e) => _app.StartBreak(BreakKind.Eyes, strict: true);
     private void Cancel_Click(object sender, RoutedEventArgs e) => Close();
     private void Preset_Click(object sender, RoutedEventArgs e) { EyeInterval.Text = "20"; MovementInterval.Text = ((System.Windows.Controls.Button)sender).Tag.ToString(); NaturalRest.Text = "5"; }
     private void Export_Click(object sender, RoutedEventArgs e) => _app.ExportCsv();

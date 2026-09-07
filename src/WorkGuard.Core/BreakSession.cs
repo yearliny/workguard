@@ -1,9 +1,13 @@
 namespace WorkGuard.Core;
 
-public sealed class BreakSession(BreakKind kind, bool gentle)
+public sealed class BreakSession(BreakKind kind, bool gentle, bool strict = false, int variant = 0, bool neck = false)
 {
     public BreakKind Kind { get; } = kind;
-    public IReadOnlyList<Exercise> Exercises { get; } = Programs.For(kind, gentle);
+    public IReadOnlyList<Exercise> Exercises { get; } = Programs.For(kind, gentle, variant, neck);
+    public bool Strict { get; } = strict;
+    public bool RestOnly { get; private set; }
+    public bool ActivityCompleted => FullyCompleted && !RestOnly;
+    public void UseRestAlternative() { if (!Finished) RestOnly = true; }
     public int Index { get; private set; }
     public TimeSpan Observed { get; private set; }
     public TimeSpan StepElapsed { get; private set; }
@@ -27,5 +31,5 @@ public sealed class BreakSession(BreakKind kind, bool gentle)
     }
 
     // Skipping never awards time or a completed session.
-    public void Skip() { if (!Finished) { Index++; StepElapsed = TimeSpan.Zero; } }
+    public void Skip() { if (!Strict && !Finished) { Index++; StepElapsed = TimeSpan.Zero; } }
 }
