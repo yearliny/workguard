@@ -1,6 +1,6 @@
 param(
     [ValidateSet('win-x64', 'win-arm64')][string]$Runtime = 'win-x64',
-    [ValidateSet('both', 'portable', 'lite')][string]$Mode = 'both',
+    [ValidateSet('both', 'portable', 'lite')][string]$Mode = 'lite',
     [switch]$SkipTests
 )
 $ErrorActionPreference = 'Stop'

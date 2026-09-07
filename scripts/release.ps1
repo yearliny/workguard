@@ -12,7 +12,7 @@ $tag = "v$Version"
 if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne $tag) {
     throw 'The pushed tag does not match the application Version.'
 }
-$expected = @("WorkGuard-$Version-win-x64-portable.zip", "WorkGuard-$Version-win-x64-lite.zip", 'SHA256SUMS-win-x64.txt')
+$expected = @("WorkGuard-$Version-win-x64-lite.zip", 'SHA256SUMS-win-x64.txt')
 $assets = @($expected | ForEach-Object {
     $path = Join-Path $ArtifactsDirectory $_
     if (-not (Test-Path $path -PathType Leaf)) { throw "Missing asset: $_" }
@@ -20,8 +20,8 @@ $assets = @($expected | ForEach-Object {
 })
 # Check the files again after transfer from the Windows build job.
 $hashLines = @(Get-Content (Join-Path $ArtifactsDirectory 'SHA256SUMS-win-x64.txt'))
-if ($hashLines.Count -ne 2) { throw 'Expected two package checksums.' }
-for ($i = 0; $i -lt 2; $i++) {
+if ($hashLines.Count -ne 1) { throw 'Expected one package checksum.' }
+for ($i = 0; $i -lt 1; $i++) {
     $name = $expected[$i]
     $line = @($hashLines | Where-Object { $_ -match ('^[a-f0-9]{64}  ' + [regex]::Escape($name) + '$') })
     if ($line.Count -ne 1) { throw "Missing or duplicate checksum: $name" }
@@ -40,17 +40,22 @@ if ($existing.Count -gt 0 -and -not $existing[0].isDraft) {
 }
 
 $notes = @"
-Windows MVP 试用版。源码：$Commit
+工作防沉迷 $Version · 桌面体验与可靠性更新。源码：$Commit
 
-## 选择下载包
+- 重做今日概览、七日统计、分组设置和活动界面。
+- 不抢焦点的角落提醒；主动开始后才进入全屏活动，支持暂停与随时退出。
+- 安静时段、日常 / 专注预设、可选提示音。
+- 本地数据损坏保护与备份恢复、CSV 导出、跨午夜计时修正。
+- 重复启动唤起已有窗口、跨会话数据写入保护、本地故障日志。
 
-- **portable.zip**：自带 .NET 桌面运行时，完整解压后运行 WorkGuard.exe，适合直接试用。
-- **lite.zip**：精简包，需要预先安装 [.NET 10 Desktop Runtime x64](https://dotnet.microsoft.com/download/dotnet/10.0)。Windows 自带的 .NET Framework 不等于 .NET 10。
-- **SHA256SUMS-win-x64.txt**：两个 ZIP 的校验值。
+## 下载
 
-两种包功能相同。请完整解压，不要只复制 exe。
+仅提供 **lite.zip** 精简版。需要 [.NET 10 Desktop Runtime x64](https://dotnet.microsoft.com/download/dotnet/10.0)。完整解压后运行 WorkGuard.exe；Windows 内置的 .NET Framework 不能替代此运行时。
 
-本版本已通过核心测试、Windows 编译，以及两种发布包的原生窗口启动检查。仍需真实使用中的混合 DPI、多显示器、锁屏与睡眠验收。当前未签名，不包含安装器或自动更新。
+目标为 Windows 10 22H2 / Windows 11 x64。SHA256SUMS-win-x64.txt 提供 ZIP 校验值。
+
+经过核心行为测试、Windows 编译、真实 WPF 窗口与交互检查、发布包启动检查。Windows CI 不等于 Win10/Win11 实机长时间验收；混合 DPI、多屏、锁屏与睡眠仍需人工验收。当前未签名，没有安装器或自动更新，因此保留预发布标记。
+
 "@
 $notesFile = Join-Path ([IO.Path]::GetTempPath()) ("workguard-release-" + [guid]::NewGuid() + '.md')
 try {

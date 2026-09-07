@@ -14,6 +14,8 @@ public sealed class BreakEngine(Preferences preferences)
     public TimeSpan EyeExposure { get; private set; }
     public TimeSpan TotalActive { get; private set; }
     public TimeSpan Longest { get; private set; }
+    public TimeSpan SnoozeRemaining => _snooze;
+    public TimeSpan EyeDueIn => MaxZero(TimeSpan.FromMinutes(Preferences.EyeIntervalMinutes) - EyeExposure);
     public TimeSpan MovementDueIn => MaxZero(TimeSpan.FromMinutes(Preferences.MovementIntervalMinutes) - Continuous);
     private TimeSpan _snooze;
     private TimeSpan _away;

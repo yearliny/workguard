@@ -1,7 +1,7 @@
 # WorkGuard 开发约束
 
 - 产品名“工作防沉迷”，代码名 WorkGuard，仓库建议名 workguard。
-- Windows 11 为当前目标，C# + .NET 10 + WPF。Core / Data 不得依赖 WPF 或 Windows API。
+- Windows 10 22H2 / Windows 11 x64 为当前目标，C# + .NET 10 + WPF。Core / Data 不得依赖 WPF 或 Windows API。
 - 不引入后台服务、账号、遥测、广告、云依赖；健康相关数据本地保存。
 - 时间推进必须可测试，核心不得直接读取系统时间。连续计时使用单调时钟；日统计使用本地日期。
 - 静默提醒与已完成休息是不同概念。会议 / 演示不得直接重置健康暴露计时。

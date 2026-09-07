@@ -1,14 +1,13 @@
-using System.Runtime.InteropServices;
+using WorkGuard.Windows.Platform;
 using System.Windows.Input;
-using System.Windows.Interop;
-using Forms = System.Windows.Forms;
 
 namespace WorkGuard.Windows.Views;
 
 public partial class BreakWindow : Window
 {
     private readonly BreakSession _session;
-    private readonly Forms.Screen _screen;
+    private readonly bool _sound;
+    private int _lastIndex;
     private bool _started;
     private bool _finishing;
     public bool HasStarted => _started;
@@ -16,17 +15,17 @@ public partial class BreakWindow : Window
     public event Action<BreakSession>? Ended;
     public event Action<BreakSession>? Completed;
 
-    public BreakWindow(BreakKind kind, bool gentle, bool automatic, TimeSpan continuous)
+    public BreakWindow(BreakKind kind, bool gentle, bool automatic, TimeSpan continuous, bool sound = true)
     {
         InitializeComponent();
         _session = new BreakSession(kind, gentle);
-        _screen = Forms.Screen.FromPoint(Forms.Cursor.Position);
+        _sound = sound;
         ShowActivated = !automatic;
         if (kind == BreakKind.Eyes)
         {
             Width = 490; Height = 620;
             Heading.Text = "目光，放远一点";
-            Instruction.Text = "准备好后，看向窗外或远处 20 秒。结束时会播放系统提示音，不必盯着屏幕。";
+            Instruction.Text = "准备好后，看向窗外或远处 20 秒。结束时可播放提示音，不必盯着屏幕。";
             StartButton.Content = "开始 20 秒远眺";
             Footnote.Text = "这只是休息提示，不需要用力眨眼或揉眼。";
         }
@@ -39,27 +38,15 @@ public partial class BreakWindow : Window
         Eyebrow.Text = $"已连续工作约 {(int)continuous.TotalMinutes} 分钟";
         Countdown.Text = Programs.Duration(kind).ToString(@"mm\:ss");
         Progress.Visibility = Visibility.Collapsed;
-        SourceInitialized += (_, _) => Place(kind);
+        Loaded += (_, _) => WindowPlacement.Place(this, false, kind == BreakKind.Eyes);
         Closed += (_, _) => Ended?.Invoke(_session);
         StateChanged += (_, _) => { if (WindowState == WindowState.Minimized) PauseForInterruption(); };
-    }
-
-    private void Place(BreakKind kind)
-    {
-        var handle = new WindowInteropHelper(this).Handle;
-        var bounds = kind == BreakKind.Eyes ? _screen.WorkingArea : _screen.Bounds;
-        var source = HwndSource.FromHwnd(handle);
-        var scale = source?.CompositionTarget?.TransformToDevice ?? Matrix.Identity;
-        var width = kind == BreakKind.Eyes ? Math.Min((int)(Width * scale.M11), bounds.Width) : bounds.Width;
-        var height = kind == BreakKind.Eyes ? Math.Min((int)(Height * scale.M22), bounds.Height) : bounds.Height;
-        var left = kind == BreakKind.Eyes ? bounds.Right - width : bounds.Left;
-        var top = kind == BreakKind.Eyes ? bounds.Bottom - height : bounds.Top;
-        SetWindowPos(handle, new IntPtr(-1), left, top, width, height, 0x0010); // SWP_NOACTIVATE
     }
 
     private void Start_Click(object sender, RoutedEventArgs e)
     {
         _started = true;
+        if (_session.Kind != BreakKind.Eyes) WindowPlacement.Place(this, true, false);
         StartButton.Visibility = Visibility.Collapsed;
         SnoozeButton.Visibility = Visibility.Collapsed;
         PauseButton.Visibility = Visibility.Visible;
@@ -79,7 +66,12 @@ public partial class BreakWindow : Window
     private void Pause_Click(object sender, RoutedEventArgs e) { _session.Paused = !_session.Paused; Render(); }
     private void Skip_Click(object sender, RoutedEventArgs e) { _session.Skip(); Render(); }
     private void Exit_Click(object sender, RoutedEventArgs e) => Close();
-    private void Window_KeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.Escape) Close(); }
+    private void Window_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape) { Close(); e.Handled = true; }
+        else if (e.Key == Key.Space && e.OriginalSource is not System.Windows.Controls.Button)
+        { if (!_started) Start_Click(sender, e); else if (!_session.Finished) Pause_Click(sender, e); e.Handled = true; }
+    }
 
     private void Render()
     {
@@ -90,10 +82,11 @@ public partial class BreakWindow : Window
             if (_session.FullyCompleted) Completed?.Invoke(_session);
             if (_session.Kind == BreakKind.Eyes)
             {
-                if (_session.FullyCompleted) System.Media.SystemSounds.Asterisk.Play();
+                if (_session.FullyCompleted && _sound) System.Media.SystemSounds.Asterisk.Play();
                 Close();
                 return;
             }
+            NextStep.Text = "";
             Heading.Text = _session.FullyCompleted ? "好了，带着轻松回来" : "这次就到这里";
             Instruction.Text = _session.FullyCompleted ? "活动流程已完成。准备好了，再继续工作。" : "你跳过了部分动作，这次不会记为完整活动。";
             Countdown.Text = _session.Observed.ToString(@"mm\:ss");
@@ -108,14 +101,13 @@ public partial class BreakWindow : Window
         Eyebrow.Text = _session.Paused ? "已暂停 · 准备好后继续" : "给身体一点空间";
         Heading.Text = exercise.Title;
         Instruction.Text = exercise.Instruction;
-        Glyph.Text = exercise.Glyph;
+        if (_lastIndex != _session.Index && _sound) System.Media.SystemSounds.Asterisk.Play();
+        _lastIndex = _session.Index;
+        NextStep.Text = _session.Index + 1 < _session.Exercises.Count ? "接下来 · " + _session.Exercises[_session.Index + 1].Title : "这是最后一个动作";
         Countdown.Text = TimeSpan.FromSeconds(Math.Ceiling(_session.Remaining.TotalSeconds)).ToString(@"mm\:ss");
         Progress.Value = 100 * _session.StepElapsed.TotalSeconds / exercise.Seconds;
         PauseButton.Content = _session.Paused ? "继续" : "暂停";
         StepLabel.Text = $"{_session.Index + 1} / {_session.Exercises.Count} · 已活动 {(int)_session.Observed.TotalSeconds} 秒";
     }
 
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SetWindowPos(IntPtr handle, IntPtr after, int x, int y, int width, int height, uint flags);
 }

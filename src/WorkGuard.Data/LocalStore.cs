@@ -26,6 +26,7 @@ public sealed class LocalStore(string directory)
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     public string? LoadWarning { get; private set; }
     public bool ReadOnly { get; private set; }
+    public bool CanRestoreBackup => File.Exists(_path + ".bak");
 
     public StoredState Load()
     {
@@ -60,7 +61,7 @@ public sealed class LocalStore(string directory)
 
     public void Save(StoredState state)
     {
-        if (ReadOnly) return;
+        if (ReadOnly) throw new IOException("本地数据处于只读保护状态，请先恢复备份或检查数据文件。");
         Directory.CreateDirectory(directory);
         var temporary = _path + ".tmp";
         using (var stream = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None))
@@ -79,5 +80,29 @@ public sealed class LocalStore(string directory)
         day = new DayStats { Date = date };
         state.Days.Add(day);
         return day;
+    }
+
+    public StoredState RestoreBackup()
+    {
+        var backup = _path + ".bak";
+        var text = File.ReadAllText(backup);
+        // Validate through the same loader in an isolated folder before touching any existing data.
+        var staging = Path.Combine(directory, "restore-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(staging);
+        try
+        {
+            File.WriteAllText(Path.Combine(staging, "state.json"), text);
+            var reader = new LocalStore(staging);
+            var restored = reader.Load();
+            if (reader.ReadOnly) throw new IOException("备份也无法读取，原数据保持不变。");
+            var temp = _path + ".restore.tmp";
+            File.WriteAllText(temp, text);
+            if (File.Exists(_path)) File.Replace(temp, _path, _path + ".preserved-" + Guid.NewGuid().ToString("N"));
+            else File.Move(temp, _path);
+            ReadOnly = false;
+            LoadWarning = null;
+            return restored;
+        }
+        finally { Directory.Delete(staging, recursive: true); }
     }
 }

@@ -41,6 +41,17 @@ internal static class WindowsActivity
                Math.Abs(r.Right - b.Right) <= 2 && Math.Abs(r.Bottom - b.Bottom) <= 2;
     }
 
+    public static string? StartupCommand()
+    {
+        using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run");
+        return key?.GetValue("WorkGuard") as string;
+    }
+    public static void RestoreStartup(string? command)
+    {
+        using var key = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run");
+        if (command is null) key.DeleteValue("WorkGuard", false); else key.SetValue("WorkGuard", command);
+    }
+
     public static void SetStartup(bool enabled)
     {
         using var key = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run");
