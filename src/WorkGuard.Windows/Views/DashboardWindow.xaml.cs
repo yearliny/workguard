@@ -36,7 +36,27 @@ public partial class DashboardWindow : Window
         if (_app.LastCompletion is not null) TimingHint.Text = _app.LastCompletion;
         ContinuousText.Text = ((int)_app.Engine.Continuous.TotalMinutes).ToString("00");
         NextText.Text = _app.Engine.MovementDueIn > TimeSpan.Zero ? $"约 {Math.Ceiling(_app.Engine.MovementDueIn.TotalMinutes)} 分钟后，起来走一走。" : "已经到了活动时间，给身体几分钟。";
+        if (!_app.Delivery.CanDeliver)
+        {
+            NextText.Text = _app.Delivery.Reason == DeliveryReason.Returning ? $"{Math.Ceiling(_app.Delivery.Remaining.TotalSeconds)} 秒后恢复到期提醒。" : "自动提醒暂缓，手动休息随时可用。";
+            TimingHint.Text = _app.DeliveryDetail;
+        }
+        else if (_app.Engine.SnoozeRemaining > _app.Engine.MovementDueIn)
+            NextText.Text = $"至少 {Math.Ceiling(_app.Engine.SnoozeRemaining.TotalMinutes)} 分钟后再提醒活动。";
         if (!_app.State.Preferences.OnboardingComplete) NextText.Text = "先完成快速配置，开启适合你的休息提醒。";
+        var p = _app.State.Preferences;
+        DeliveryTitle.Text = _app.Status;
+        DeliveryExplanation.Text = _app.DeliveryDetail;
+        ScheduleSummary.Text = p.WorkScheduleEnabled
+            ? $"{ReminderCopy.Days(p)} · {ReminderCopy.Clock(p.WorkStartMinute)} 至 {(p.WorkEndMinute < p.WorkStartMinute ? "次日 " : "")}{ReminderCopy.Clock(p.WorkEndMinute)}"
+            : "每天均可提醒 · 尚未限制工作时段";
+        if (p.QuietHoursEnabled) ScheduleSummary.Text += $" · 安静 {ReminderCopy.Clock(p.QuietStartMinute)}–{ReminderCopy.Clock(p.QuietEndMinute)}";
+        Timeline.Update(p, DateTime.Now);
+        AppointmentSummary.Text = !p.OfficeReminderEnabled ? "尚未预约，随时可以手动开始。" :
+            today.OfficeBreaks > 0 ? "今天已完成 7 分钟活动。" :
+            _app.State.LastOfficeReminderDate >= today.Date ? "今日邀请已送达，不再重复提醒。" :
+            $"预约时间 {ReminderCopy.Clock(p.OfficeReminderMinute)} · 由你点击开始";
+        AppointmentDetail.Text = p.OfficeReminderEnabled ? "遵循工作与静默安排；预约后 30 分钟内等待，错过就略过。" : "点「调整安排」，为每天留一个固定的活动时间。";
         ActiveText.Text = Time(today.ActiveSeconds);
         LongestText.Text = $"{(int)(today.LongestSeconds / 60)} 分钟";
         BreaksText.Text = $"{today.MovementBreaks + today.OfficeBreaks} 次";
@@ -70,6 +90,7 @@ public partial class DashboardWindow : Window
     private void Export_Click(object sender, RoutedEventArgs e) => _app.ExportCsv();
     private void Welcome_Click(object sender, RoutedEventArgs e) => _app.ShowWelcome();
     private void Settings_Click(object sender, RoutedEventArgs e) => _app.ShowSettings();
+    private void Schedule_Click(object sender, RoutedEventArgs e) => _app.ShowScheduleSettings();
     private void Movement_Click(object sender, RoutedEventArgs e) => _app.StartBreak(BreakKind.Movement);
     private void Eyes_Click(object sender, RoutedEventArgs e) => _app.StartBreak(BreakKind.Eyes);
     private void Office_Click(object sender, RoutedEventArgs e) => _app.StartBreak(BreakKind.Office);

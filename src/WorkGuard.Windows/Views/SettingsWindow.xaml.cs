@@ -27,6 +27,12 @@ public partial class SettingsWindow : Window
         QuietEnabled.IsChecked = p.QuietHoursEnabled;
         QuietStart.Text = TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(p.QuietStartMinute)).ToString("HH:mm");
         QuietEnd.Text = TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(p.QuietEndMinute)).ToString("HH:mm");
+        WorkEnabled.IsChecked = p.WorkScheduleEnabled;
+        WorkStart.Text = ReminderCopy.Clock(p.WorkStartMinute);
+        WorkEnd.Text = ReminderCopy.Clock(p.WorkEndMinute);
+        OfficeEnabled.IsChecked = p.OfficeReminderEnabled;
+        OfficeTime.Text = ReminderCopy.Clock(p.OfficeReminderMinute);
+        for (var i = 0; i < 7; i++) DayChoices[i].IsChecked = WorkSchedule.IncludesDay(p, (DayOfWeek)i);
         BackupButton.IsEnabled = app.CanRestoreBackup;
         SaveButton.Content = p.OnboardingComplete ? "保存设置" : "保存并开始";
         VersionText.Text = "WorkGuard " + typeof(App).Assembly.GetName().Version?.ToString(3);
@@ -43,6 +49,22 @@ public partial class SettingsWindow : Window
         if (!TimeOnly.TryParseExact(QuietStart.Text, "HH:mm", out var start) || !TimeOnly.TryParseExact(QuietEnd.Text, "HH:mm", out var end) ||
             (QuietEnabled.IsChecked == true && start == end))
         { ValidationText.Text = "请填写有效且不同的开始与结束时间，例如 12:00 与 13:00。"; return; }
+        var days = Enumerable.Range(0, 7).Where(i => DayChoices[i].IsChecked == true).Sum(i => 1 << i);
+        if (!TimeOnly.TryParseExact(WorkStart.Text, "HH:mm", out var workStart) ||
+            !TimeOnly.TryParseExact(WorkEnd.Text, "HH:mm", out var workEnd) ||
+            (WorkEnabled.IsChecked == true && (days == 0 || workStart == workEnd)))
+        {
+            Sections.SelectedItem = ScheduleTab;
+            ValidationText.Text = "请选择至少一个工作日，并填写不同的起止时间（HH:mm）。";
+            return;
+        }
+        if (!TimeOnly.TryParseExact(OfficeTime.Text, "HH:mm", out var officeTime))
+        {
+            Sections.SelectedItem = ScheduleTab;
+            ValidationText.Text = "请填写有效的预约时间，例如 15:00。";
+            OfficeTime.Focus();
+            return;
+        }
         var p = _app.State.Preferences with
         {
             StrictMode = Strict.IsChecked == true, StrictEyes = ForceEyes.IsChecked == true, NeckMovements = Neck.IsChecked == true,
@@ -52,11 +74,15 @@ public partial class SettingsWindow : Window
             ReduceMotion = ReducedMotion.IsChecked == true,
             GentleOnly = Gentle.IsChecked == true, SoundEnabled = Sound.IsChecked == true,
             QuietHoursEnabled = QuietEnabled.IsChecked == true, QuietStartMinute = start.Hour * 60 + start.Minute,
-            QuietEndMinute = end.Hour * 60 + end.Minute
+            QuietEndMinute = end.Hour * 60 + end.Minute,
+            WorkScheduleEnabled = WorkEnabled.IsChecked == true, WorkDays = days,
+            WorkStartMinute = workStart.Hour * 60 + workStart.Minute, WorkEndMinute = workEnd.Hour * 60 + workEnd.Minute,
+            OfficeReminderEnabled = OfficeEnabled.IsChecked == true, OfficeReminderMinute = officeTime.Hour * 60 + officeTime.Minute
         };
         if (_app.ApplyPreferences(p)) Close();
         else ValidationText.Text = _app.DataError;
     }
+    private System.Windows.Controls.CheckBox[] DayChoices => [Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday];
     private void PreviewStrict_Click(object sender, RoutedEventArgs e) => _app.StartBreak(BreakKind.Eyes, strict: true);
     private void Cancel_Click(object sender, RoutedEventArgs e) => Close();
     private void Preset_Click(object sender, RoutedEventArgs e) { EyeInterval.Text = "20"; MovementInterval.Text = ((System.Windows.Controls.Button)sender).Tag.ToString(); NaturalRest.Text = "5"; }

@@ -8,6 +8,7 @@ internal sealed class TrayIcon : IDisposable
     private readonly Forms.NotifyIcon _icon;
     private readonly Drawing.Icon _drawingIcon;
     private readonly Forms.ToolStripMenuItem _status = new("正在启动…") { Enabled = false };
+    private readonly Forms.ToolStripMenuItem _detail = new("请稍候") { Enabled = false };
     private readonly Forms.ToolStripMenuItem _meeting = new("会议模式（仅静默计时）") { CheckOnClick = true };
     private readonly Forms.ContextMenuStrip _menu = new();
     private readonly Forms.ToolStripMenuItem _pause = new("暂停提醒 1 小时");
@@ -31,6 +32,7 @@ internal sealed class TrayIcon : IDisposable
         finally { DestroyIcon(handle); }
 
         _menu.Items.Add(_status);
+        _menu.Items.Add(_detail);
         _menu.Items.Add(new Forms.ToolStripSeparator());
         _menu.Items.Add("打开今日概览", null, (_, _) => app.ShowDashboard());
         _menu.Items.Add("20 秒眼睛休息", null, (_, _) => app.StartBreak(BreakKind.Eyes));
@@ -42,6 +44,7 @@ internal sealed class TrayIcon : IDisposable
         _pause.Click += (_, _) => app.TogglePause();
         _menu.Items.Add(_pause);
         _menu.Items.Add("设置", null, (_, _) => app.ShowSettings());
+        _menu.Items.Add("工作日与活动预约", null, (_, _) => app.ShowScheduleSettings());
         _menu.Items.Add(new Forms.ToolStripSeparator());
         _menu.Items.Add("退出", null, (_, _) => { app.EndBreakForSystem(); Application.Current.Shutdown(); });
         _icon = new Forms.NotifyIcon { Icon = _drawingIcon, Text = "工作防沉迷", ContextMenuStrip = _menu, Visible = true };
@@ -49,10 +52,11 @@ internal sealed class TrayIcon : IDisposable
         _icon.BalloonTipClicked += (_, _) => app.ShowDashboard();
     }
 
-    public void Update(TimeSpan continuous, TimeSpan due, bool paused, bool meeting)
+    public void Update(string status, string detail, bool paused, bool meeting)
     {
-        _status.Text = $"连续约 {continuous.TotalMinutes:0} 分钟 · 下次活动 {Math.Ceiling(due.TotalMinutes):0} 分钟";
-        _icon.Text = $"工作防沉迷 · 连续约 {continuous.TotalMinutes:0} 分钟";
+        _status.Text = status;
+        _detail.Text = detail;
+        _icon.Text = $"工作防沉迷 · {status}";
         _pause.Text = paused ? "恢复提醒" : "暂停提醒 1 小时";
         _meeting.Checked = meeting;
     }

@@ -23,7 +23,12 @@ internal sealed class AppController : IDisposable
     public bool CanRestoreBackup => _store.CanRestoreBackup;
     public bool QuietHoursActive => State.Preferences.IsQuietTime(TimeOnly.FromDateTime(DateTime.Now));
     public bool Paused => _clock.Elapsed < _pauseUntil;
-    public string Status { get; private set; } = "正在观察工作节奏";
+    public ReminderGate Delivery { get; } = new();
+    public string Status => !State.Preferences.OnboardingComplete ? ReminderCopy.Title(DeliveryReason.Setup) : ReminderCopy.Title(Delivery.Reason);
+    public string DeliveryDetail => ReminderCopy.Detail(Delivery, State.Preferences, Engine, _localNow, PauseRemaining) +
+        (Delivery.CanDeliver && !_idleKnown ? " 空闲状态不可用，暂按用屏时间估计。" : "");
+    private DateTime _localNow = DateTime.Now;
+    private bool _idleKnown = true;
     public event Action? Changed;
     private readonly LocalStore _store;
     private readonly Stopwatch _clock = Stopwatch.StartNew();
@@ -70,28 +75,57 @@ internal sealed class AppController : IDisposable
         var now = _clock.Elapsed;
         var elapsed = now - _lastTick;
         _lastTick = now;
-        var before = Engine.TotalActive;
         var quietFullscreen = State.Preferences.QuietWhenFullscreen && WindowsActivity.IsOtherAppFullscreen();
-        if (quietFullscreen || QuietHoursActive || Paused || _locked || _sleeping) DismissReminder();
-        if (_locked || _sleeping)
+        Advance(elapsed, DateTimeOffset.Now, WindowsActivity.IdleAge(), quietFullscreen, _locked || _sleeping);
+        if (now - _lastSave >= TimeSpan.FromSeconds(30)) { Save(); _lastSave = now; }
+    }
+
+    // Same controller path is exercised by Windows checks with explicit time and activity samples.
+    internal void Advance(TimeSpan elapsed, DateTimeOffset localNow, TimeSpan? idle, bool quietFullscreen, bool unavailable = false)
+    {
+        _localNow = localNow.DateTime;
+        _idleKnown = idle is not null;
+        var p = State.Preferences;
+        var before = Engine.TotalActive;
+        var outside = !WorkSchedule.Allows(p, _localNow);
+        var quietHours = p.IsQuietTime(TimeOnly.FromDateTime(_localNow));
+        var away = p.InferNaturalRest && !MeetingMode && !quietFullscreen && idle >= TimeSpan.FromMinutes(1);
+        if (quietFullscreen || quietHours || outside || Paused || unavailable || MeetingMode || away) DismissReminder();
+        var reason = !p.OnboardingComplete ? DeliveryReason.Setup : unavailable ? DeliveryReason.Unavailable :
+            _break is not null ? DeliveryReason.Resting : _welcome is not null || _settings is not null ? DeliveryReason.Settings :
+            MeetingMode ? DeliveryReason.Meeting : Paused ? DeliveryReason.Paused : outside ? DeliveryReason.OutsideSchedule :
+            quietHours ? DeliveryReason.QuietHours : quietFullscreen ? DeliveryReason.Fullscreen : away ? DeliveryReason.Idle :
+            _reminder is not null ? DeliveryReason.ReminderOpen : DeliveryReason.Ready;
+        Delivery.Advance(elapsed, reason);
+        if (unavailable)
         {
             Engine.Advance(elapsed, new(TimeSpan.Zero, Unavailable: true));
-            Status = "已锁屏或休眠";
+            _break?.PauseForInterruption();
         }
         else if (_break is { IsFinished: true })
         {
-            Status = "活动已完成 · 准备好后继续";
+            // Do not accrue work while the user is still on the completion page.
         }
         else if (_break is { IsRunning: true })
         {
             if (elapsed > TimeSpan.FromSeconds(10)) _break.PauseForInterruption();
             else _break.Tick(elapsed);
-            Status = "正在休息";
         }
         else
         {
-            var idle = WindowsActivity.IdleAge();
-            var quiet = Paused || MeetingMode || QuietHoursActive || quietFullscreen || _break is not null || _reminder is not null || _settings is not null || _welcome is not null || !State.Preferences.OnboardingComplete;
+            // Reserve and persist the daily offer before showing it. An offer is never activity credit.
+            var officeDue = DataError is null && Delivery.CanDeliver && Engine.SnoozeRemaining <= TimeSpan.Zero &&
+                elapsed > TimeSpan.Zero && elapsed <= TimeSpan.FromSeconds(10) &&
+                WorkSchedule.OfficeDue(p, _localNow, State.LastOfficeReminderDate,
+                    State.Days.Any(d => d.Date == DateOnly.FromDateTime(_localNow) && d.OfficeBreaks > 0));
+            if (officeDue)
+            {
+                var previousDate = State.LastOfficeReminderDate;
+                State.LastOfficeReminderDate = DateOnly.FromDateTime(_localNow);
+                if (Save()) ShowReminder(BreakKind.Office);
+                else State.LastOfficeReminderDate = previousDate;
+            }
+            var quiet = !Delivery.CanDeliver || _reminder is not null;
             // Unavailable idle API disables inference; it must never imply absence.
             var result = Engine.Advance(elapsed, new(idle ?? TimeSpan.Zero, Quiet: quiet,
                 KeepCountingWithoutInput: MeetingMode || quietFullscreen || idle is null));
@@ -99,10 +133,6 @@ internal sealed class AppController : IDisposable
                 idle >= TimeSpan.FromMinutes(State.Preferences.NaturalRestMinutes) && _break is { HasStarted: false })
                 _break.Close();
             if (State.Preferences.InferNaturalRest && !MeetingMode && !quietFullscreen && idle >= TimeSpan.FromMinutes(State.Preferences.NaturalRestMinutes)) DismissReminder();
-            Status = !State.Preferences.OnboardingComplete ? "完成快速配置后开启提醒" : QuietHoursActive ? "安静时段 · 计时继续" : MeetingMode ? "会议模式 · 静默计时" : Paused ? "提醒已暂停 · 计时继续" :
-                quietFullscreen ? "全屏应用 · 静默计时" :
-                idle is null ? "无法读取空闲状态 · 按用屏时间估计" :
-                State.Preferences.InferNaturalRest && idle >= TimeSpan.FromMinutes(1) ? "暂未检测到输入 · 可能正在离席" : "正在工作 · 记得变换姿势";
             if (result == Reminder.MovementSoon)
                 _tray?.Notify("稍后，给身体一点时间", "还有约 10 分钟就到活动时间。可以先完成手头这一小段。");
             else if (result is Reminder.Movement or Reminder.Eyes)
@@ -112,9 +142,8 @@ internal sealed class AppController : IDisposable
                 else ShowReminder(kind);
             }
         }
-        Statistics.Record(State, Engine.TotalActive - before, DateTimeOffset.Now, Engine.Continuous);
-        if (now - _lastSave >= TimeSpan.FromSeconds(30)) { Save(); _lastSave = now; }
-        _tray?.Update(Engine.Continuous, Engine.MovementDueIn, Paused, MeetingMode);
+        Statistics.Record(State, Engine.TotalActive - before, localNow, Engine.Continuous);
+        _tray?.Update(Status, DeliveryDetail, Paused, MeetingMode);
         Changed?.Invoke();
     }
 
@@ -127,7 +156,7 @@ internal sealed class AppController : IDisposable
         {
             _reminder = null;
             if (reminder.Accepted) StartBreak(kind, beginImmediately: true);
-            else Engine.Snooze(TimeSpan.FromMinutes(5));
+            else if (kind != BreakKind.Office) Engine.Snooze(TimeSpan.FromMinutes(5));
         };
         reminder.Show();
     }
@@ -189,9 +218,16 @@ internal sealed class AppController : IDisposable
     {
         if (_welcome is not null) { _welcome.Activate(); return; }
         if (_settings is not null) { _settings.Activate(); return; }
+        DismissReminder();
         _settings = new SettingsWindow(this);
         _settings.Closed += (_, _) => _settings = null;
         _settings.Show();
+    }
+
+    public void ShowScheduleSettings()
+    {
+        ShowSettings();
+        if (_settings is not null) _settings.Sections.SelectedItem = _settings.ScheduleTab;
     }
 
     public bool ApplyPreferences(Preferences value)
@@ -204,12 +240,13 @@ internal sealed class AppController : IDisposable
             previousStartup = WindowsActivity.StartupCommand();
             if (next.StartWithWindows || previousStartup is not null)
             { WindowsActivity.SetStartup(next.StartWithWindows); startupChanged = true; }
-            _store.Save(new StoredState { Preferences = next, Days = State.Days });
+            _store.Save(new StoredState { Preferences = next, Days = State.Days, LastOfficeReminderDate = State.LastOfficeReminderDate });
             State.Preferences = next;
             Motion.Configure(next.ReduceMotion);
             Engine.Configure(next);
             DataError = null;
-            if (QuietHoursActive) DismissReminder();
+            DismissReminder();
+            Delivery.Advance(TimeSpan.Zero, DeliveryReason.Settings);
             Changed?.Invoke();
             return true;
         }
@@ -290,7 +327,7 @@ internal sealed class AppController : IDisposable
     private void DisplayChanged(object? sender, EventArgs e) => OnUi(() => { DismissReminder(); _break?.CloseForSystem(); });
     private void OnUi(Action action) { if (!_disposed) Application.Current.Dispatcher.BeginInvoke(new Action(() => { if (!_disposed) action(); })); }
 
-    public void Save()
+    public bool Save()
     {
         try
         {
@@ -298,6 +335,7 @@ internal sealed class AppController : IDisposable
             _store.Save(State);
             _saveErrorShown = false;
             DataError = null;
+            return true;
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
@@ -305,6 +343,7 @@ internal sealed class AppController : IDisposable
             if (!_saveErrorShown) Diagnostics.Record(error);
             _saveErrorShown = true;
             DataError = "本地数据暂未保存。请检查目录权限或恢复备份。";
+            return false;
         }
     }
 

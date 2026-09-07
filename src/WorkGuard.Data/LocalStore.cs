@@ -18,6 +18,7 @@ public sealed class StoredState
     public int SchemaVersion { get; set; } = 1;
     public Preferences Preferences { get; set; } = new();
     public List<DayStats> Days { get; set; } = [];
+    public DateOnly? LastOfficeReminderDate { get; set; }
 }
 
 public sealed class LocalStore(string directory)
