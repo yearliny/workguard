@@ -164,7 +164,7 @@ public partial class BreakWindow : Window
             TimerCaption.Text = "已留给自己的时间";
             Motion.Reveal(SceneContent);
             NextStep.Visibility = Visibility.Collapsed;
-            Visuals.SetGlyph(SnoozeButton, "\uE8FB");
+            Visuals.SetGlyph(SnoozeButton, "\uE72C");
             NextStep.Text = "";
             Heading.Text = _session.FullyCompleted ? "好了，带着轻松回来" : "这次就到这里";
             Instruction.Text = _session.FullyCompleted ? "活动流程已完成。准备好了，再继续工作。" : "你跳过了部分动作，这次不会记为完整活动。";

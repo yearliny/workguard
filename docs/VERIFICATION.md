@@ -3,7 +3,8 @@
 - 本地完整 Release 编译通过，0 警告、0 错误；45 项核心行为测试通过。
 - 新增核心检查：快速配置保留高级偏好、自定义周期，预设不擅自启用强制或眼睛提醒。
 - Windows 检查增加三步引导、返回保持、失败重试、关闭不保存、窄窗口，以及跳过 / 安静替代的真实反馈。
-- Windows 运行结果与真实截图随本次 PR 更新；保留现有 Win10 / Win11 实机验收边界。
+- [Windows CI](https://github.com/yearliny/workguard/actions/runs/34112622844) 已通过真实 WPF 交互与精简包检查，保存 27 个界面状态。已查看入门、紧凑错误页、动作路线和未完整结束截图，见 [活动路线](images/activity-route-v0.6.png)。
+- [PR #5](https://github.com/yearliny/workguard/pull/5) 跟踪最终构建；保留现有 Win10 / Win11 实机验收边界。
 
 ---
 
