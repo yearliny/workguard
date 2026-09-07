@@ -2,6 +2,7 @@
 
 - 本地 Release 编译及 43 项核心行为测试通过。初轮 [Windows CI](https://github.com/yearliny/workguard/actions/runs/34103011667) 的实际界面、动画及发布包检查已通过；[PR #4](https://github.com/yearliny/workguard/pull/4) 跟踪最终构建。
 - Windows CI 继续验证全部强制休息语义；新增真实 WPF 动画时钟的中间态、结束态、关闭动画和系统动画偏好检查。
+- [布局修正后的 Windows 检查](https://github.com/yearliny/workguard/actions/runs/34103538174) 已通过；实际截图见 [沉浸休息页](images/sanctuary-rest-v0.5.png)。
 - 截图使用减少动画模式固定布局，另存 18–20 三张实际动画帧；新增紧凑概览和休息布局。
 - 动画只影响渲染属性，不参与健康计时或延迟紧急退出。关闭窗口时解除相关动画；无循环动画。
 - 保留预发布标记；Win10 / Win11、混合 DPI、辅助技术和长期资源占用仍待实机验收。

@@ -63,10 +63,10 @@
             <TextBlock x:Name="EyeText" Foreground="{StaticResource MutedBrush}" Margin="0,10,0,12"/>
             <UniformGrid Columns="2">
               <Button x:Name="EyesAction" Style="{StaticResource ActivityCard}" Click="Eyes_Click" AutomationProperties.Name="远眺 20 秒" Margin="0,0,12,0">
-                <StackPanel Orientation="Horizontal"><Border Style="{StaticResource IconBadge}" Background="#E9EEF5" Margin="0,0,14,0"><ui:Symbol Text="&#xE890;" Foreground="#537481"/></Border><StackPanel><TextBlock Text="让目光走远一点" FontWeight="SemiBold"/><TextBlock Text="远眺 20 秒" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"/></StackPanel></StackPanel>
+                <StackPanel Orientation="Horizontal"><Border Style="{StaticResource IconBadge}" Background="#E9EEF5" Margin="0,0,14,0"><ui:Symbol Text="&#xE890;" Foreground="#537481"/></Border><StackPanel><TextBlock Text="让目光走远一点" FontWeight="SemiBold" LineHeight="22"/><TextBlock Text="远眺 20 秒" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"/></StackPanel></StackPanel>
               </Button>
               <Button x:Name="OfficeAction" Style="{StaticResource ActivityCard}" Click="Office_Click" AutomationProperties.Name="办公室活动 7 分钟" Margin="0">
-                <StackPanel Orientation="Horizontal"><Border Style="{StaticResource IconBadge}" Background="#F6E7D9" Margin="0,0,14,0"><ui:Symbol Text="&#xE916;" Foreground="#A57348"/></Border><StackPanel><TextBlock Text="给身体充个电" FontWeight="SemiBold"/><TextBlock Text="办公室活动 7 分钟" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"/></StackPanel></StackPanel>
+                <StackPanel Orientation="Horizontal"><Border Style="{StaticResource IconBadge}" Background="#F6E7D9" Margin="0,0,14,0"><ui:Symbol Text="&#xE916;" Foreground="#A57348"/></Border><StackPanel><TextBlock Text="给身体充个电" FontWeight="SemiBold" LineHeight="22"/><TextBlock Text="办公室活动 7 分钟" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"/></StackPanel></StackPanel>
               </Button>
             </UniformGrid>
           </StackPanel>

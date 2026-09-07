@@ -10,7 +10,7 @@
     <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="BorderBrush" Color="#DCE4DD"/>
     <Style x:Key="AppWindow" TargetType="Window">
-      <Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI, Microsoft YaHei UI"/>
+      <Setter Property="FontFamily" Value="Segoe UI, Microsoft YaHei UI"/>
       <Setter Property="FontSize" Value="15"/>
       <Setter Property="Background" Value="{StaticResource CanvasBrush}"/>
       <Setter Property="Foreground" Value="{StaticResource InkBrush}"/>
