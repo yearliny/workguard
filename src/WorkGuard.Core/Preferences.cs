@@ -16,6 +16,7 @@ public sealed record Preferences
     public bool GentleOnly { get; init; } = true;
     public bool StartWithWindows { get; init; }
     public bool OnboardingComplete { get; init; }
+    public bool ReduceMotion { get; init; }
     public bool SoundEnabled { get; init; } = true;
     public bool QuietHoursEnabled { get; init; }
     public int QuietStartMinute { get; init; } = 12 * 60;

@@ -45,6 +45,7 @@ internal sealed class AppController : IDisposable
         State = _store.Load();
         DataError = _store.LoadWarning;
         Engine = new BreakEngine(State.Preferences);
+        Motion.Configure(State.Preferences.ReduceMotion);
     }
 
     public void Start()
@@ -188,6 +189,7 @@ internal sealed class AppController : IDisposable
             { WindowsActivity.SetStartup(next.StartWithWindows); startupChanged = true; }
             _store.Save(new StoredState { Preferences = next, Days = State.Days });
             State.Preferences = next;
+            Motion.Configure(next.ReduceMotion);
             Engine.Configure(next);
             DataError = null;
             if (QuietHoursActive) DismissReminder();
@@ -210,6 +212,7 @@ internal sealed class AppController : IDisposable
         try
         {
             State = _store.RestoreBackup();
+            Motion.Configure(State.Preferences.ReduceMotion);
             Engine.Configure(State.Preferences);
             DataError = null;
             _settings?.Close();

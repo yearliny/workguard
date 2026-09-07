@@ -37,6 +37,14 @@ internal static class SmokeTest
         using var file = File.Create(Path.Combine(directory, name + ".png")); encoder.Save(file);
     }
 
+    private static void Pump(int milliseconds)
+    {
+        var frame = new DispatcherFrame();
+        var timer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(milliseconds) };
+        timer.Tick += (_, _) => { timer.Stop(); frame.Continue = false; };
+        timer.Start(); Dispatcher.PushFrame(frame);
+    }
+
     public static void Run(string resultFile)
     {
         Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, new Action(() =>
@@ -46,6 +54,7 @@ internal static class SmokeTest
             try
             {
                 using var app = new AppController(folder);
+                Motion.Configure(true); // Stable screenshots; exercise real animation clocks separately below.
                 if (WindowsActivity.IdleAge() is null) throw new InvalidOperationException("GetLastInputInfo failed");
                 _ = WindowsActivity.IsOtherAppFullscreen();
                 using var tray = new TrayIcon(app);
@@ -59,7 +68,7 @@ internal static class SmokeTest
                 for (var i = 0; i < 37 * 60; i++) app.Engine.Advance(TimeSpan.FromSeconds(1), new(TimeSpan.Zero, Quiet: true));
                 var dashboard = new DashboardWindow(app); windows.Add(dashboard); dashboard.Show();
                 Capture(dashboard, "01-today");
-                Check(dashboard.HeroArt.Source is BitmapSource { PixelWidth: 440 }, "Embedded illustration missing or unbounded decode");
+                Check(dashboard.HeroArt.Source is BitmapSource { PixelWidth: 1000 }, "Embedded illustration missing or unbounded decode");
                 var symbol = new Symbol();
                 Check(new Typeface(symbol.FontFamily, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal).TryGetGlyphTypeface(out var font), "Icon font missing");
                 foreach (var code in new[] { 0xE713, 0xE768, 0xE890, 0xE916, 0xE769, 0xE72C, 0xE74E, 0xE711, 0xE8B7, 0xE893, 0xE823, 0xE80F, 0xE787, 0xE708, 0xE7F4, 0xE8FB })
@@ -120,6 +129,28 @@ internal static class SmokeTest
                 var cover = new RestCoverWindow(System.Windows.Forms.Screen.PrimaryScreen!, () => { });
                 windows.Add(cover); cover.Show(); cover.Update("休息中", "还有 20 秒", Brushes.Beige); cover.Release();
                 Check(!cover.IsVisible, "Companion cover failed to release");
+                // Real WPF animation clock: intermediate frames and settled state, no simulation of session time.
+                Motion.SystemAnimationOverride = true; Motion.Configure(false);
+                var animated = new BreakWindow(BreakKind.Movement, true, false, TimeSpan.Zero, false);
+                windows.Add(animated); animated.Show(); animated.BeginSession();
+                Motion.Reveal(animated.SceneContent);
+                if (Motion.Enabled)
+                {
+                    Check(animated.SceneContent.HasAnimatedProperties, "Entrance has no animation clock");
+                    Capture(animated, "18-motion-start"); Pump(130); Capture(animated, "19-motion-middle");
+                    Check(animated.SceneContent.Opacity > 0 && animated.SceneContent.Opacity < 1, "Entrance did not interpolate");
+                    Pump(450); Capture(animated, "20-motion-settled");
+                    Check(animated.SceneContent.Opacity == 1, "Entrance did not settle");
+                    Motion.Reveal(animated.SceneContent); Motion.Configure(true);
+                    Check(!animated.SceneContent.HasAnimatedProperties && animated.SceneContent.Opacity == 1, "Reduce motion left active entrance clock");
+                }
+                Motion.SystemAnimationOverride = false; Motion.Configure(false);
+                Motion.Reveal(animated.SceneContent); Check(!animated.SceneContent.HasAnimatedProperties, "System reduced motion ignored");
+                Motion.SystemAnimationOverride = null; Motion.Configure(true); animated.Close();
+                dashboard.Width = 820; dashboard.Height = 620; Capture(dashboard, "21-compact-dashboard");
+                var compact = new BreakWindow(BreakKind.Eyes, true, false, TimeSpan.Zero, false);
+                windows.Add(compact); compact.Show(); compact.Width = 640; compact.Height = 620; Capture(compact, "22-compact-rest");
+                Check(compact.ScenicPanel.Visibility == Visibility.Collapsed && compact.StartButton.IsVisible, "Compact rest hides primary action"); compact.Close();
                 // Route and statistics integration, using the production controller without its wall-clock timer.
                 app.State.Preferences = app.State.Preferences with { StrictMode = true };
                 app.StartBreak(BreakKind.Movement, automatic: true, strict: true);
@@ -137,6 +168,7 @@ internal static class SmokeTest
             }
             finally
             {
+                Motion.SystemAnimationOverride = null; Motion.Configure(true);
                 foreach (var window in windows) if (window.IsLoaded) { if (window is BreakWindow breakWindow) breakWindow.CloseForSystem(); else window.Close(); }
                 if (Directory.Exists(folder)) Directory.Delete(folder, recursive: true);
             }
