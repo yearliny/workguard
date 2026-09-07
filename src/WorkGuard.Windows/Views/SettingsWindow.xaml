@@ -166,7 +166,7 @@
             <Border Style="{StaticResource Card}" Padding="18" Margin="0,18,0,12">
               <StackPanel>
                 <TextBlock Text="错过了，就留到下一天" FontWeight="SemiBold"/>
-                <TextBlock Text="预约后的 30 分钟内，遇到会议、全屏、离席或安静时段会等待；超过窗口就略过。每天最多邀请一次，重启不会重复。预约也遵循工作时段；未开启工作安排时则每天有效。" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0"/>
+                <TextBlock Text="预约后当日最多等待 30 分钟，最迟到午夜；遇到会议、全屏、离席或安静时段会等待，超过窗口就略过。每天最多邀请一次，重启不会重复。预约也遵循工作时段；未开启工作安排时则每天有效。" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0"/>
               </StackPanel>
             </Border>
           </StackPanel>

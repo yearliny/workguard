@@ -36,6 +36,10 @@ public partial class SettingsWindow : Window
         BackupButton.IsEnabled = app.CanRestoreBackup;
         SaveButton.Content = p.OnboardingComplete ? "保存设置" : "保存并开始";
         VersionText.Text = "WorkGuard " + typeof(App).Assembly.GetName().Version?.ToString(3);
+        SizeChanged += (_, _) => Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, new Action(() =>
+        {
+            if (System.Windows.Input.Keyboard.FocusedElement is FrameworkElement focused && IsAncestorOf(focused)) focused.BringIntoView();
+        }));
     }
     private void Save_Click(object sender, RoutedEventArgs e)
     {

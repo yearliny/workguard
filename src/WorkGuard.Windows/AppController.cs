@@ -21,11 +21,12 @@ internal sealed class AppController : IDisposable
     public TimeSpan PauseRemaining => Paused ? _pauseUntil - _clock.Elapsed : TimeSpan.Zero;
     public string? DataError { get; private set; }
     public bool CanRestoreBackup => _store.CanRestoreBackup;
-    public bool QuietHoursActive => State.Preferences.IsQuietTime(TimeOnly.FromDateTime(DateTime.Now));
+    public DateTime LocalNow => _localNow;
     public bool Paused => _clock.Elapsed < _pauseUntil;
     public ReminderGate Delivery { get; } = new();
     public string Status => !State.Preferences.OnboardingComplete ? ReminderCopy.Title(DeliveryReason.Setup) : ReminderCopy.Title(Delivery.Reason);
-    public string DeliveryDetail => ReminderCopy.Detail(Delivery, State.Preferences, Engine, _localNow, PauseRemaining) +
+    public string DeliveryDetail => !State.Preferences.OnboardingComplete ? "完成快速配置后，自动提醒才会开启。" :
+        ReminderCopy.Detail(Delivery, State.Preferences, Engine, _localNow, PauseRemaining) +
         (Delivery.CanDeliver && !_idleKnown ? " 空闲状态不可用，暂按用屏时间估计。" : "");
     private DateTime _localNow = DateTime.Now;
     private bool _idleKnown = true;

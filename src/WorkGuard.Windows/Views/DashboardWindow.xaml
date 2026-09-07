@@ -110,21 +110,21 @@
       <TabItem x:Name="ScheduleTab" Header="我的安排" ui:Visuals.Glyph="&#xE787;">
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
           <StackPanel Margin="0,20,12,0" ui:Motion.Enter="True">
-            <DockPanel Margin="0,0,0,18">
+            <DockPanel Margin="0,0,0,12">
               <Button x:Name="EditScheduleButton" DockPanel.Dock="Right" Content="调整安排" ui:Visuals.Glyph="&#xE713;" Click="Schedule_Click"/>
               <StackPanel><TextBlock Text="让一天，张弛有度。" FontSize="26" FontWeight="SemiBold"/><TextBlock Text="提醒什么时候来，也由你来决定。" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0"/></StackPanel>
             </DockPanel>
-            <Border Background="#E8EDE3" CornerRadius="22" Padding="24" Margin="0,0,0,16">
+            <Border Background="#E8EDE3" CornerRadius="22" Padding="18" Margin="0,0,0,12">
               <DockPanel>
                 <Border DockPanel.Dock="Left" Style="{StaticResource IconBadge}" Width="48" Height="48" Background="#F8FAF3" Margin="0,0,18,0"><ui:Symbol Text="&#xE708;" Foreground="{StaticResource AccentBrush}" FontSize="22"/></Border>
                 <StackPanel><TextBlock x:Name="DeliveryTitle" FontSize="20" FontWeight="SemiBold"/><TextBlock x:Name="DeliveryExplanation" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0"/></StackPanel>
               </DockPanel>
             </Border>
-            <Border Style="{StaticResource Card}" Margin="0,0,0,16">
+            <Border Style="{StaticResource Card}" Padding="18" Margin="0,0,0,12">
               <StackPanel>
                 <TextBlock Text="今天的提醒时段" FontSize="18" FontWeight="SemiBold"/>
                 <TextBlock x:Name="ScheduleSummary" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,12"/>
-                <ui:ScheduleTimeline x:Name="Timeline" Height="88" AutomationProperties.Name="今日24小时时段示意，具体安排见文字"/>
+                <ui:ScheduleTimeline x:Name="Timeline" Height="76" AutomationProperties.Name="今日24小时时段示意，具体安排见文字"/>
                 <WrapPanel Margin="0,2,0,0">
                   <StackPanel Orientation="Horizontal" Margin="0,0,20,0"><Border Width="12" Height="12" CornerRadius="4" Background="#709782" Margin="0,0,8,0"/><TextBlock Text="可提醒时段" FontSize="12" Foreground="{StaticResource MutedBrush}"/></StackPanel>
                   <StackPanel Orientation="Horizontal" Margin="0,0,20,0"><Border Width="12" Height="12" CornerRadius="4" Background="#EAC9A6" Margin="0,0,8,0"/><TextBlock Text="安静时段" FontSize="12" Foreground="{StaticResource MutedBrush}"/></StackPanel>
@@ -132,7 +132,7 @@
                 </WrapPanel>
               </StackPanel>
             </Border>
-            <Border Style="{StaticResource Card}" Padding="22" Background="#F7EFE5" Margin="0,0,0,16">
+            <Border Style="{StaticResource Card}" Padding="18" Background="#F7EFE5" Margin="0,0,0,12">
               <DockPanel>
                 <Button DockPanel.Dock="Right" Content="现在开始" Click="Office_Click" ui:Visuals.Glyph="&#xE768;" VerticalAlignment="Center" Margin="18,0,0,0"/>
                 <StackPanel><TextBlock Text="给自己一个 7 分钟的约定" FontSize="18" FontWeight="SemiBold"/><TextBlock x:Name="AppointmentSummary" Margin="0,10,0,0"/><TextBlock x:Name="AppointmentDetail" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,8,0,0"/></StackPanel>

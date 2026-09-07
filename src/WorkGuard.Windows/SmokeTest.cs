@@ -237,6 +237,9 @@ internal static class SmokeTest
                 Check(plan.IsVisible && plan.ValidationText.Text.Contains("预约"), "Invalid appointment accepted");
                 plan.OfficeTime.Text = "23:00";
                 plan.Width = 700; plan.Height = 580; Capture(plan, "32-compact-schedule-settings");
+                var inputViewport = FindAncestor<ScrollViewer>(plan.OfficeTime);
+                var inputBounds = plan.OfficeTime.TransformToAncestor(inputViewport).TransformBounds(new Rect(plan.OfficeTime.RenderSize));
+                Check(inputBounds.Top >= -1 && inputBounds.Bottom <= inputViewport.ActualHeight + 1, "Focused schedule input clipped after resizing");
                 Click(plan, "SaveButton");
                 Check(!plan.IsVisible && scheduled.State.Preferences is { WorkDays: 32, WorkStartMinute: 1320, WorkEndMinute: 420, OfficeReminderMinute: 1380 }, "Valid overnight schedule failed to save");
                 using (var reopened = new AppController(Path.Combine(folder, "schedule")))
