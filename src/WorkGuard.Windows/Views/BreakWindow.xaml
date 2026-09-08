@@ -48,7 +48,7 @@
             <TextBlock x:Name="StepLabel" Visibility="Collapsed" TextAlignment="Center" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,10,0,0"/>
           </StackPanel>
         </ScrollViewer>
-        <Grid x:Name="ScenicPanel" Grid.Column="1" Margin="40,12,12,12" MaxWidth="420" MaxHeight="460" VerticalAlignment="Center" ui:Motion.Enter="True">
+        <Grid x:Name="ScenicPanel" Grid.Column="1" Margin="40,12,12,12" MaxWidth="420" MaxHeight="460" ui:Motion.Enter="True">
           <Border x:Name="SceneryFrame" CornerRadius="180,180,28,28" Background="Transparent"/>
           <ui:SceneImage x:Name="RestArt"  CornerRadius="28"/>
           <Border Visibility="Collapsed" Background="#F7FBFAF5" CornerRadius="18" Padding="20,16" Margin="20" VerticalAlignment="Bottom">
