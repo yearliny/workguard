@@ -161,8 +161,12 @@ internal static class SmokeTest
                 if (Motion.Enabled)
                 {
                     Check(animated.SceneContent.HasAnimatedProperties, "Entrance has no animation clock");
-                    Capture(animated, "18-motion-start"); Pump(130); Capture(animated, "19-motion-middle");
+                    Capture(animated, "18-motion-start");
+                    // PNG encoding can outlast the 320 ms entrance on CI. Start a fresh
+                    // production animation and sample before doing any screenshot I/O.
+                    Motion.Reveal(animated.SceneContent); Pump(130);
                     Check(animated.SceneContent.Opacity > 0 && animated.SceneContent.Opacity < 1, "Entrance did not interpolate");
+                    Capture(animated, "19-motion-middle");
                     Pump(450); Capture(animated, "20-motion-settled");
                     Check(animated.SceneContent.Opacity == 1, "Entrance did not settle");
                     Motion.Reveal(animated.SceneContent); Motion.Configure(true);
