@@ -20,13 +20,24 @@
         <Button x:Name="AlternativeButton" Content="动作不适合 · 改为安静休息" Click="Alternative_Click" Visibility="Collapsed" Background="Transparent"/>
         <Button x:Name="SnoozeButton" Content="5 分钟后提醒" ui:Visuals.Glyph="&#xE823;" Click="Exit_Click"/>
       </WrapPanel>
-      <Grid x:Name="SceneLayout" MaxWidth="1200" Margin="8,0">
+      <Border x:Name="JourneyPanel" DockPanel.Dock="Bottom" MaxWidth="1360" Background="#CCFFFFFF" CornerRadius="20" Padding="24,16" Margin="12,16,12,0">
+        <StackPanel>
+          <DockPanel Margin="0,0,0,10">
+            <TextBlock x:Name="TotalCountdown" DockPanel.Dock="Right" FontSize="22" FontWeight="SemiBold" Margin="16,0,0,0"/>
+            <TextBlock x:Name="JourneyLabel" FontSize="14" VerticalAlignment="Center"/>
+          </DockPanel>
+          <ProgressBar x:Name="TotalProgress" Minimum="0" Maximum="100" Height="8" Foreground="{StaticResource AccentBrush}" Background="#DFE5DD" BorderThickness="0" AutomationProperties.Name="整场休息流程进度"/>
+          <Grid x:Name="JourneyMarkers" Margin="0,7,0,0"/>
+          <TextBlock x:Name="JourneyNote" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0"/>
+        </StackPanel>
+      </Border>
+      <Grid x:Name="SceneLayout" MaxWidth="1440" Margin="8,0">
         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition x:Name="SceneryColumn" Width="0.85*"/></Grid.ColumnDefinitions>
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
           <StackPanel x:Name="SceneContent" MaxWidth="520" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="12,12" ui:Motion.Enter="True">
             <Border CornerRadius="20" Background="#DDE7DA" Padding="14,7" HorizontalAlignment="Center" Margin="0,0,0,14"><TextBlock x:Name="Eyebrow" Text="先放下手头的事" TextAlignment="Center" FontSize="12" Foreground="{StaticResource AccentBrush}"/></Border>
             <Border x:Name="StateBadge" Style="{StaticResource IconBadge}" Width="52" Height="52" CornerRadius="16" HorizontalAlignment="Center" Margin="0,6" Visibility="Collapsed"><ui:Symbol x:Name="CompletionSymbol" Text="&#xE8FB;" FontSize="26" Foreground="{StaticResource AccentBrush}"/></Border>
-            <TextBlock x:Name="Heading" Text="身体需要活动一下" FontSize="34" FontWeight="SemiBold" TextAlignment="Center" Margin="0,0,0,12"/>
+            <TextBlock x:Name="Heading" Text="身体需要活动一下" FontSize="38" FontWeight="SemiBold" TextAlignment="Center" Margin="0,0,0,12"/>
             <TextBlock x:Name="Instruction" FontSize="16" TextAlignment="Center" LineHeight="26" Margin="0,0,0,16"/>
             <Grid x:Name="TimerFace" Width="204" Height="204" Margin="0,4,0,14">
               <ui:ProgressRing x:Name="SessionRing" Stroke="{StaticResource AccentBrush}"/>
@@ -37,10 +48,10 @@
             <TextBlock x:Name="StepLabel" Visibility="Collapsed" TextAlignment="Center" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,10,0,0"/>
           </StackPanel>
         </ScrollViewer>
-        <Grid x:Name="ScenicPanel" Grid.Column="1" Margin="28,12,12,12" MaxWidth="440" MaxHeight="600" ui:Motion.Enter="True">
+        <Grid x:Name="ScenicPanel" Grid.Column="1" Margin="40,12,12,12" MaxWidth="580" MaxHeight="700" ui:Motion.Enter="True">
           <Border x:Name="SceneryFrame" CornerRadius="180,180,28,28" Background="Transparent"/>
-          <ui:SceneImage x:Name="RestArt" Source="{StaticResource SanctuaryArt}" CornerRadius="28"/>
-          <Border Background="#EEFBFAF5" CornerRadius="18" Padding="20,16" Margin="20" VerticalAlignment="Bottom">
+          <ui:SceneImage x:Name="RestArt"  CornerRadius="28"/>
+          <Border Background="#F7FBFAF5" CornerRadius="18" Padding="20,16" Margin="20" VerticalAlignment="Bottom">
             <StackPanel><TextBlock x:Name="SceneName" Text="此刻，无需赶路" FontSize="20" FontWeight="SemiBold"/><TextBlock x:Name="SceneNote" Text="远处的风景，值得抬头看看。" Foreground="{StaticResource MutedBrush}" FontSize="13" Margin="0,8,0,0"/>
               <StackPanel x:Name="RoutePanel" Margin="0,16,0,0">
                 <Border Background="#D6DED1" Height="1" Margin="0,0,0,12"/>

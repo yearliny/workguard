@@ -17,6 +17,10 @@ public sealed class BreakSession(BreakKind kind, bool gentle, bool strict = fals
     public Exercise Current => Exercises[Math.Min(Index, Exercises.Count - 1)];
     public TimeSpan Remaining => Finished ? TimeSpan.Zero : TimeSpan.FromSeconds(Current.Seconds) - StepElapsed;
 
+    // Timeline includes skipped portions, while Observed remains actual time only.
+    public TimeSpan TimelineElapsed => TimeSpan.FromSeconds(Exercises.Take(Index).Sum(x => x.Seconds)) + StepElapsed;
+    public TimeSpan TotalRemaining => Finished ? TimeSpan.Zero : TimeSpan.FromSeconds(Exercises.Skip(Index).Sum(x => x.Seconds)) - StepElapsed;
+
     public void Advance(TimeSpan elapsed)
     {
         if (Paused || Finished || elapsed <= TimeSpan.Zero || elapsed > TimeSpan.FromSeconds(10)) return;
