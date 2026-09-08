@@ -94,7 +94,8 @@ public partial class BreakWindow : Window
         _routeIndex = -1;
         RestArt.Visibility = Visibility.Visible;
         StateBadge.Visibility = Visibility.Collapsed;
-        NextStep.Visibility = StepLabel.Visibility = Visibility.Visible;
+        NextStep.Visibility = Visibility.Visible;
+        StepLabel.Visibility = Visibility.Collapsed;
         Countdown.FontSize = 48;
         TimerCaption.Text = "当前环节剩余";
         if (_strict || _session.Kind != BreakKind.Eyes) WindowPlacement.Place(this, true, false);
@@ -244,7 +245,7 @@ public partial class BreakWindow : Window
 
     private void RenderRoute()
     {
-        RoutePanel.Visibility = _session.Kind == BreakKind.Eyes || _session.RestOnly || _session.Finished ? Visibility.Collapsed : Visibility.Visible;
+        RoutePanel.Visibility = ActualHeight < 860 || _session.Kind == BreakKind.Eyes || _session.RestOnly || _session.Finished ? Visibility.Collapsed : Visibility.Visible;
         if (_routeIndex == _session.Index) return;
         _routeIndex = _session.Index;
         RouteHeading.Text = _started ? "此刻与接下来" : "活动预告 · 前三个环节";
@@ -258,10 +259,11 @@ public partial class BreakWindow : Window
 
     private void FitScene()
     {
+        RenderRoute();
         var wide = ActualWidth >= 760;
         ScenicPanel.Visibility = wide ? Visibility.Visible : Visibility.Collapsed;
         SceneryColumn.Width = wide ? new GridLength(.85, GridUnitType.Star) : new GridLength(0);
-        var compact = ActualHeight < 720;
+        var compact = ActualHeight < 860;
         TimerFace.Width = TimerFace.Height = compact ? 168 : ActualWidth > 1400 ? 250 : 204;
         Heading.FontSize = wide ? 38 : 30;
         Countdown.FontSize = compact ? 42 : 48;
