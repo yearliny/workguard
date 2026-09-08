@@ -50,7 +50,7 @@ public partial class BreakWindow : Window
         if (strict)
         {
             ExitButton.Content = "紧急退出 · Esc";
-            Footnote.Text = "休息结束会自动返回 · 不适请停止活动 · Esc 打开紧急退出";
+            Footnote.Text = "不适请停止活动 · 结束后自动返回";
         }
         Loaded += (_, _) =>
         {
@@ -94,7 +94,7 @@ public partial class BreakWindow : Window
         _routeIndex = -1;
         RestArt.Visibility = Visibility.Visible;
         StateBadge.Visibility = Visibility.Collapsed;
-        NextStep.Visibility = Visibility.Visible;
+        NextStep.Visibility = Visibility.Collapsed;
         StepLabel.Visibility = Visibility.Collapsed;
         Countdown.FontSize = 48;
         TimerCaption.Text = "当前环节剩余";
@@ -218,29 +218,15 @@ public partial class BreakWindow : Window
         var remaining = TimeSpan.FromSeconds(Math.Ceiling(_session.TotalRemaining.TotalSeconds));
         TotalCountdown.Text = finished ? $"实际休息 {_session.Observed:mm\\:ss}" : $"总剩余 {remaining:mm\\:ss}";
         JourneyLabel.Text = finished ? (_session.FullyCompleted ? "本次休息已完成" : "流程结束 · 未完整完成")
-            : _session.RestOnly ? "安静休息" : $"整场进度 · 第 {_session.Index + 1} / {_session.Exercises.Count} 环节";
+            : _session.RestOnly ? "安静休息" : $"动作 {_session.Index + 1} / {_session.Exercises.Count}";
         JourneyNote.Text = finished ? "以上进度按实际休息时长显示。"
             : _session.Paused ? "已暂停 · 当前环节与整场计时均已停止"
             : !_started ? $"预计 {Programs.Duration(_session.Kind):mm\\:ss} · 准备好后开始"
             : _session.TimelineElapsed > _session.Observed ? $"已跳过部分动作 · 实际休息 {_session.Observed:mm\\:ss} · 不记为完整活动"
             : _strict ? "结束后自动返回工作" : "按自己的节奏来 · 环节切换时总进度会继续前进";
-        JourneyMarkers.Visibility = _session.RestOnly || finished || _session.Kind == BreakKind.Eyes ? Visibility.Collapsed : Visibility.Visible;
-        if (JourneyMarkers.Children.Count == 0)
-        {
-            for (var i = 0; i < _session.Exercises.Count; i++)
-            {
-                var exercise = _session.Exercises[i];
-                JourneyMarkers.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(exercise.Seconds, GridUnitType.Star) });
-                var label = new TextBlock { Text = $"{i + 1:00}", FontSize = 11, ToolTip = $"{exercise.Title} · {exercise.Seconds} 秒" };
-                Grid.SetColumn(label, i); JourneyMarkers.Children.Add(label);
-            }
-        }
-        for (var i = 0; i < JourneyMarkers.Children.Count; i++)
-        {
-            var label = (TextBlock)JourneyMarkers.Children[i];
-            label.FontWeight = i == _session.Index ? FontWeights.Bold : FontWeights.Normal;
-            label.Foreground = (Brush)FindResource(i == _session.Index ? "AccentBrush" : "MutedBrush");
-        }
+        JourneyPanel.Visibility = _session.Kind == BreakKind.Eyes ? Visibility.Collapsed : Visibility.Visible;
+        JourneyNote.Visibility = _session.Paused || (finished && !_session.FullyCompleted) || _session.TimelineElapsed > _session.Observed
+            ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void RenderRoute()
@@ -264,9 +250,10 @@ public partial class BreakWindow : Window
         ScenicPanel.Visibility = wide ? Visibility.Visible : Visibility.Collapsed;
         SceneryColumn.Width = wide ? new GridLength(.85, GridUnitType.Star) : new GridLength(0);
         var compact = ActualHeight < 860;
-        TimerFace.Width = TimerFace.Height = compact ? 168 : ActualWidth > 1400 ? 250 : 204;
+        TimerFace.Width = 280;
+        TimerFace.Height = compact ? 140 : 170;
         Heading.FontSize = wide ? 38 : 30;
-        Countdown.FontSize = compact ? 42 : 48;
+        Countdown.FontSize = compact ? 68 : 80;
     }
 
     private void ApplyScene(RestScene scene)
