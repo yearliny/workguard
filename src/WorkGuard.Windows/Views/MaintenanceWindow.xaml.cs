@@ -35,7 +35,8 @@ public partial class MaintenanceWindow : Window
             if (_strict && !_allowClose && !Session.Finished) { e.Cancel = true; RequestExit(); }
         };
         Closed += (_, _) => { ReleaseCovers(); _voice.Dispose(); Ended?.Invoke(); };
-        SizeChanged += (_, _) => { Demonstration.Height = ActualHeight < 720 ? 200 : 270; Heading.FontSize = ActualWidth < 800 ? 28 : 34; };
+        SizeChanged += (_, _) => { Demonstration.Height = ActualHeight < 720 ? 160 : ActualHeight < 860 ? 240 : 300;
+            Countdown.FontSize = ActualWidth < 800 ? 48 : 64; Heading.FontSize = ActualWidth < 800 ? 28 : 34; };
     }
     private static string Clock(double seconds) => TimeSpan.FromSeconds(Math.Ceiling(Math.Max(0, seconds))).ToString(@"mm\:ss");
     public void BeginSession()

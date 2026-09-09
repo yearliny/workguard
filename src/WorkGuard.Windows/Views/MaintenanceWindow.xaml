@@ -31,10 +31,15 @@
           <TextBlock x:Name="Phase" Text="给身体几分钟，慢慢活动一下" TextAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,10"/>
           <TextBlock x:Name="Heading" Text="让身体，保留活动的空间" TextAlignment="Center" FontSize="34" FontWeight="SemiBold"/>
           <TextBlock x:Name="Cue" TextAlignment="Center" MaxWidth="680" FontSize="17" LineHeight="28" Margin="0,16,0,0"/>
-          <ui:MovementIllustration x:Name="Demonstration" Height="270" MaxWidth="580" Margin="0,8"/>
-          <TextBlock x:Name="Countdown" FontSize="56" FontWeight="Light" TextAlignment="Center"/>
-          <TextBlock x:Name="TimerLabel" Text="预计总时长 · 含动作准备" FontSize="12" TextAlignment="Center" Foreground="{StaticResource MutedBrush}"/>
-          <TextBlock x:Name="Next" TextAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,14,0,0" FontSize="13"/>
+          <Grid Margin="0,22,0,8">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="1.35*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <ui:MovementIllustration x:Name="Demonstration" Height="270" MaxWidth="580" Margin="0,8"/>
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0">
+              <TextBlock x:Name="Countdown" FontSize="64" FontWeight="Light" TextAlignment="Center"/>
+              <TextBlock x:Name="TimerLabel" Text="预计总时长 · 含动作准备" FontSize="12" TextAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0"/>
+              <TextBlock x:Name="Next" TextAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,24,0,0" FontSize="13"/>
+            </StackPanel>
+          </Grid>
         </StackPanel>
         <StackPanel x:Name="ConfirmationPanel" Visibility="Collapsed" MaxWidth="620" Margin="12,28">
           <TextBlock Text="这次，有跟着活动吗？" FontSize="30" FontWeight="SemiBold" TextAlignment="Center"/>

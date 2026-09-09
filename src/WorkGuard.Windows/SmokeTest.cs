@@ -300,6 +300,14 @@ internal static class SmokeTest
         Click(window, "StartButton");
         for (var i = 0; i < 12; i++) app.Advance(TimeSpan.FromSeconds(1), now = now.AddSeconds(1), TimeSpan.Zero, false);
         Capture(window, "32-maintenance-guidance");
+        var viewport = FindAncestor<ScrollViewer>(window.TimerLabel);
+        var cueBounds = window.Next.TransformToAncestor(viewport).TransformBounds(new Rect(window.Next.RenderSize));
+        Check(cueBounds.Top >= 0 && cueBounds.Bottom <= viewport.ActualHeight + 1, "Guidance timer/next step requires scrolling");
+        window.Width = 760; window.Height = 640;
+        Capture(window, "35-maintenance-compact");
+        cueBounds = window.Next.TransformToAncestor(viewport).TransformBounds(new Rect(window.Next.RenderSize));
+        Check(cueBounds.Top >= 0 && cueBounds.Bottom <= viewport.ActualHeight + 1 && window.DiscomfortButton.IsVisible, "Compact guidance clips next step or safety exit");
+        WindowPlacement.Place(window, true, false);
         Check(window.Session.ObservedPractice == 7, "Preparation counted as practice");
         app.Advance(TimeSpan.FromSeconds(1), now = now.AddSeconds(1), TimeSpan.Zero, false, unavailable: true);
         var before = window.Session.ObservedPractice;
@@ -326,6 +334,11 @@ internal static class SmokeTest
         Check(app.MaintenancePlan(true).All(s => s.Exercise.Id != blocked), "Blocked action returned in plan");
         using (var reopened = new AppController(Path.Combine(folder, "maintenance")))
             Check(reopened.State.Preferences.MaintenanceBlockedExercises.Contains(blocked) && reopened.State.Days.Sum(d => d.MaintenanceSeconds.Values.Sum()) == 120, "Maintenance state lost on restart");
+        app.State.Preferences = app.State.Preferences with { MaintenanceExcludedAreas = BodyArea.All };
+        app.StartBreak(BreakKind.Movement, beginImmediately: true);
+        var fallback = Application.Current.Windows.OfType<BreakWindow>().Single(w => w.IsVisible); windows.Add(fallback);
+        Check(fallback.Heading.Text == "自由休息一会儿", "Excluded actions returned through legacy fallback");
+        fallback.CloseForSystem();
         Capture(dashboard, "34-maintenance-progress"); dashboard.Close();
         var blockedPath = Path.Combine(folder, "maintenance-write-failure");
         File.WriteAllText(blockedPath, "occupied");

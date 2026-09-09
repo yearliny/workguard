@@ -22,10 +22,10 @@ public partial class BreakWindow : Window
     public event Action<BreakSession>? Ended;
     public event Action<BreakSession>? Completed;
 
-    public BreakWindow(BreakKind kind, bool gentle, bool automatic, TimeSpan continuous, bool sound = true, bool strict = false, int variant = 0, bool neck = false)
+    public BreakWindow(BreakKind kind, bool gentle, bool automatic, TimeSpan continuous, bool sound = true, bool strict = false, int variant = 0, bool neck = false, bool freeRest = false, bool standing = true)
     {
         InitializeComponent();
-        _session = new BreakSession(kind, gentle, strict, variant, neck);
+        _session = new BreakSession(kind, gentle, strict, variant, neck, freeRest, standing);
         _strict = strict;
         _sound = sound;
         ShowActivated = strict || !automatic;
@@ -43,6 +43,12 @@ public partial class BreakWindow : Window
             Heading.Text = kind == BreakKind.Office ? "留 7 分钟给身体" : "起来，走动一下";
             Instruction.Text = "暂时离开座位，跟随简单的活动提示。\n动作以舒适为准，可以随时退出。";
             StartButton.Content = kind == BreakKind.Office ? "开始 7 分钟活动" : "开始 3 分钟活动";
+        }
+        if (freeRest && kind != BreakKind.Eyes)
+        {
+            Heading.Text = "留一段自由休息";
+            StartButton.Content = kind == BreakKind.Office ? "开始 7 分钟休息" : "开始 3 分钟休息";
+            Instruction.Text = "按自己的情况选择休息方式。\n这次不安排指定的身体动作。";
         }
         Eyebrow.Text = $"已连续工作约 {(int)continuous.TotalMinutes} 分钟";
         Countdown.Text = Programs.Duration(kind).ToString(@"mm\:ss");

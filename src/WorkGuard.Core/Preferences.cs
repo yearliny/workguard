@@ -14,6 +14,9 @@ public sealed record Preferences
     public bool StrictMode { get; init; }
     public bool StrictEyes { get; init; } = true;
     public bool NeckMovements { get; init; }
+    public bool UseFreeRest(BreakKind kind) => kind != BreakKind.Eyes &&
+        (kind == BreakKind.Movement && MaintenanceEnabled || (MaintenanceExcludedAreas & ~BodyArea.Neck) != BodyArea.None ||
+         MaintenanceBlockedExercises.Length > 0 || !MaintenanceStanding);
     public bool ShouldForce(BreakKind kind) => StrictMode &&
         (kind == BreakKind.Movement || kind == BreakKind.Eyes && StrictEyes && EyeReminders);
     public bool EyeReminders { get; init; } = true;

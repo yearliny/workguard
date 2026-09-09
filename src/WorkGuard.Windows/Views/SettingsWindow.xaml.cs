@@ -16,12 +16,12 @@ public partial class SettingsWindow : Window
         NaturalRest.Text = p.NaturalRestMinutes.ToString();
         Strict.IsChecked = p.StrictMode;
         ForceEyes.IsChecked = p.StrictEyes;
-        Neck.IsChecked = p.NeckMovements;
+        Neck.IsChecked = p.NeckMovements && (p.MaintenanceExcludedAreas & BodyArea.Neck) == 0;
         MaintenanceEnabled.IsChecked = p.MaintenanceEnabled;
         MaintenanceGoal.Text = p.MaintenanceGoalMinutes.ToString();
         MaintenanceStanding.IsChecked = p.MaintenanceStanding;
         MaintenanceVoice.IsChecked = p.MaintenanceVoice;
-        foreach (var area in new[] { BodyArea.Thoracic, BodyArea.Shoulders, BodyArea.Hips, BodyArea.BackLegs, BodyArea.Ankles, BodyArea.Neck })
+        foreach (var area in new[] { BodyArea.Thoracic, BodyArea.Shoulders, BodyArea.Hips, BodyArea.BackLegs, BodyArea.Ankles })
             MaintenanceAreaChoices.Children.Add(new CheckBox { Tag = area, Content = MaintenanceCatalog.Label(area),
                 IsChecked = (p.MaintenanceExcludedAreas & area) == 0, Margin = new Thickness(0, 0, 16, 12) });
         foreach (var id in p.MaintenanceBlockedExercises)
@@ -88,6 +88,7 @@ public partial class SettingsWindow : Window
         }
         var excluded = MaintenanceAreaChoices.Children.OfType<CheckBox>().Where(c => c.IsChecked != true)
             .Aggregate(BodyArea.None, (areas, c) => areas | (BodyArea)c.Tag);
+        if (Neck.IsChecked != true) excluded |= BodyArea.Neck;
         var blocked = BlockedExercises.Children.OfType<CheckBox>().Where(c => c.IsChecked == true).Select(c => (string)c.Tag).ToArray();
         var p = _app.State.Preferences with
         {

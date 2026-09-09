@@ -167,6 +167,12 @@ internal sealed class AppController : IDisposable
             reminder.Description.Text = $"这次从{MaintenanceCatalog.Label(plan[0].Exercise.Area)}开始，约 {TimeSpan.FromSeconds(plan.Sum(x => x.TotalSeconds)):mm\\:ss}，含准备。";
             reminder.StartButton.Content = "开始短维护";
         }
+        if (plan.Count == 0 && State.Preferences.UseFreeRest(kind))
+        {
+            reminder.Heading.Text = "给自己一段自由休息";
+            reminder.Description.Text = "按自己的情况选择舒适的休息方式，这次不安排指定动作。";
+            reminder.StartButton.Content = kind == BreakKind.Office ? "休息 7 分钟" : "休息 3 分钟";
+        }
         _reminder = reminder;
         reminder.Closed += (_, _) =>
         {
@@ -187,7 +193,7 @@ internal sealed class AppController : IDisposable
         { StartMaintenance(false, beginImmediately || strict, strict); return; }
         DismissReminder();
         if (_break is not null) { if (!automatic) _break.Activate(); return; }
-        _break = new BreakWindow(kind, State.Preferences.GentleOnly, automatic, Engine.Continuous, State.Preferences.SoundEnabled, strict, kind == BreakKind.Eyes ? _eyeVariant++ : _bodyVariant++, State.Preferences.NeckMovements);
+        _break = new BreakWindow(kind, State.Preferences.GentleOnly, automatic, Engine.Continuous, State.Preferences.SoundEnabled, strict, kind == BreakKind.Eyes ? _eyeVariant++ : _bodyVariant++, State.Preferences.NeckMovements && (State.Preferences.MaintenanceExcludedAreas & BodyArea.Neck) == 0, freeRest: State.Preferences.UseFreeRest(kind), standing: State.Preferences.MaintenanceStanding);
         _break.Completed += session =>
         {
             if (session.FullyCompleted && Engine.Complete(session.RestOnly ? BreakKind.Eyes : session.Kind, session.Observed))

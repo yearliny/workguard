@@ -12,6 +12,17 @@ internal static class MaintenanceTests
     { var folder = Path.Combine(Path.GetTempPath(), "maintenance-" + Guid.NewGuid()); Directory.CreateDirectory(folder); try { action(folder); } finally { Directory.Delete(folder, true); } }
     public static (string Name, Action Run)[] All =>
     [
+        ("Maintenance restrictions also protect legacy movement and office fallback", () =>
+        {
+            var p = new Preferences { MaintenanceEnabled = true };
+            Check(p.UseFreeRest(BreakKind.Movement) && !p.UseFreeRest(BreakKind.Office) && !p.UseFreeRest(BreakKind.Eyes));
+            p = p with { MaintenanceEnabled = false, MaintenanceBlockedExercises = ["neck-turn"] };
+            Check(p.UseFreeRest(BreakKind.Movement) && p.UseFreeRest(BreakKind.Office));
+            Check(new Preferences { MaintenanceStanding = false }.UseFreeRest(BreakKind.Office));
+            Check(new Preferences { MaintenanceExcludedAreas = BodyArea.Shoulders }.UseFreeRest(BreakKind.Movement));
+            var free = new BreakSession(BreakKind.Office, false, neck: true, freeRest: true, standing: false);
+            Check(free.Exercises.Count == 1 && free.Exercises.Single().Seconds == 420 && free.Exercises.Single().Scene == RestScene.Distance);
+        }),
         ("Maintenance plan covers areas before repeating and excludes neck by default", () =>
         {
             var plan = MaintenancePlanner.Build(new(), new Dictionary<BodyArea, double>(), true);

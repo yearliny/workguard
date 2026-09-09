@@ -60,7 +60,7 @@ public partial class DashboardWindow : Window
         ShortMaintenanceButton.Content = plan.Count > 0 ? "短维护 · " + TimeSpan.FromSeconds(plan.Sum(x => x.TotalSeconds)).ToString(@"mm\:ss") : "短维护";
         FullMaintenanceButton.Content = fullPlan.Count > 0 ? "今日剩余 · " + TimeSpan.FromSeconds(fullPlan.Sum(x => x.TotalSeconds)).ToString(@"mm\:ss") : "今日已完成";
         MaintenanceScheduleNote.Text = (p.MaintenanceEnabled ? "短维护已融入身体休息提醒。" : "可手动开始；在维护偏好中开启自动安排。") + " 按钮时长包含准备。";
-        MovementAction.Content = p.MaintenanceEnabled && plan.Count > 0 ? "现在做一段短维护" : "现在活动 3 分钟";
+        MovementAction.Content = p.MaintenanceEnabled && plan.Count > 0 ? "现在做一段短维护" : p.UseFreeRest(BreakKind.Movement) ? "现在自由休息 3 分钟" : "现在活动 3 分钟";
         MaintenanceAreas.ItemsSource = new[] { BodyArea.Thoracic, BodyArea.Shoulders, BodyArea.Hips, BodyArea.BackLegs, BodyArea.Ankles, BodyArea.Neck }
             .Select(area => new { Name = MaintenanceCatalog.Label(area), Status = today.MaintenanceSeconds.GetValueOrDefault(area) > 0
                 ? "已确认 " + TimeSpan.FromSeconds(today.MaintenanceSeconds[area]).ToString(@"mm\:ss") + (allowedAreas.Contains(area) ? "" : " · 目前不安排")
