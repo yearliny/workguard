@@ -4,6 +4,39 @@ using WorkGuard.Data;
 // Dependency-free deterministic behavior checks. Nonzero exit code fails CI.
 var tests = new (string Name, Action Run)[]
 {
+    ("Long session total remaining survives step changes and pauses", () =>
+    {
+        var session = new BreakSession(BreakKind.Office, true);
+        Equal(TimeSpan.FromMinutes(7), session.TotalRemaining);
+        for (var i = 0; i < 6; i++) session.Advance(TimeSpan.FromSeconds(10));
+        Equal(1, session.Index);
+        Equal(TimeSpan.FromMinutes(6), session.TotalRemaining);
+        Equal(TimeSpan.FromMinutes(1), session.TimelineElapsed);
+        session.Paused = true; session.Advance(TimeSpan.FromSeconds(10));
+        Equal(TimeSpan.FromMinutes(6), session.TotalRemaining);
+        session.Paused = false; session.Advance(TimeSpan.FromSeconds(11));
+        Equal(TimeSpan.FromMinutes(6), session.TotalRemaining);
+    }),
+    ("Timeline skips do not grant observed activity or completion", () =>
+    {
+        var session = new BreakSession(BreakKind.Office, true);
+        session.Advance(TimeSpan.FromSeconds(10)); session.Skip();
+        Equal(TimeSpan.FromMinutes(6), session.TotalRemaining);
+        Equal(TimeSpan.FromSeconds(10), session.Observed);
+        Equal(TimeSpan.FromMinutes(1), session.TimelineElapsed);
+        for (var i = 0; i < 6; i++) session.Skip();
+        Equal(TimeSpan.Zero, session.TotalRemaining);
+        True(session.Finished && !session.FullyCompleted);
+    }),
+    ("Quiet alternative retains total remaining and finishes once", () =>
+    {
+        var session = new BreakSession(BreakKind.Movement, true, strict: true);
+        session.Advance(TimeSpan.FromSeconds(10)); session.UseRestAlternative();
+        Equal(TimeSpan.FromSeconds(170), session.TotalRemaining);
+        for (var i = 0; i < 17; i++) session.Advance(TimeSpan.FromSeconds(10));
+        Equal(TimeSpan.Zero, session.TotalRemaining);
+        True(session.FullyCompleted && !session.ActivityCompleted);
+    }),
     ("Work schedule is opt-in and preserves legacy all-day delivery", () =>
     {
         var p = new Preferences();

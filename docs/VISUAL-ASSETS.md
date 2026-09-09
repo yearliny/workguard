@@ -30,3 +30,10 @@ Use case: illustration-story. A compact finished decorative illustration for the
 ```text
 Use case: stylized-concept. Asset type: premium native Windows wellness application illustration; square 1024x1024 image used in a 320px-wide hero and large immersive rest backdrop. Primary request: a breathtaking yet quiet architectural sanctuary, a sculptural rounded arch carved into pale warm limestone opening onto a serene sage-green sea and distant misty hills. Three softly rounded limestone steps descend toward the opening, a small olive branch with fine leaves enters from the upper right. A warm low sun, soft atmospheric depth, subtle chalk and paper texture, exceptionally elegant editorial 3D illustration with restrained Japanese and Mediterranean sensibility. Matte materials, refined realistic soft shadows, delicate ambient occlusion, ivory and muted sage with a tiny touch of pale apricot. Front-facing composition, arch centered, generous quiet space, no sharp high contrast or busy details. Entire square filled with the scene, no border. No people, no letters, no text, no logos, no UI, no watermark. This is an atmospheric decorative art asset, not an exercise diagram.
 ```
+
+
+## 全屏休息矢量场景（PR #7）
+
+`Views/RestArtwork.cs` 为本项目原创 WPF 矢量构图：远景湖面、花园步道、暖色帘幕和陶杯植物，分别对应远眺、走动、肩背和手部休息。场景只表达休息氛围，不作为动作教学图。采用低饱和配色与植物前景；透明画布和柔和渐隐边缘直接融入页面底色，不再绘制矩形底板或拱形边框；所有 DrawingImage 创建后冻结并缓存，不增加位图、网络或运行时依赖。既有首页位图保留。
+
+整场进度与单环节数字倒计时独立。底部以细进度线显示整场进度，仅保留动作序号和总剩余时间。移除重复的状态胶囊、圆环、插图文案卡片和多行预告；正常活动时隐藏解释文字，暂停或跳过时才显示必要状态。单环节远眺隐藏重复的整场进度区。跳过动作不会增加实际休息时间，未完整完成的结果显示实际时长比例。

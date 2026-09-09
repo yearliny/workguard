@@ -108,6 +108,18 @@ internal static class SmokeTest
                 Check(body.Countdown.Text == count && !body.IsRunning, "Paused body activity advances"); Capture(body, "10-body-paused");
                 Click(body, "PauseButton"); for (var i = 0; i < 170; i++) body.Tick(TimeSpan.FromSeconds(1));
                 Check(completed == 1 && body.IsFinished && !body.IsRunning, "Full body activity not credited once"); Capture(body, "11-body-complete"); body.Close();
+                var journey = new BreakWindow(BreakKind.Office, true, false, TimeSpan.Zero, false);
+                windows.Add(journey); journey.Show(); journey.BeginSession();
+                Check(journey.TotalCountdown.Text == "总剩余 07:00", "Total countdown missing at start");
+                var movementArt = journey.RestArt.Source;
+                for (var i = 0; i < 12; i++) journey.Tick(TimeSpan.FromSeconds(10));
+                Check(journey.TotalCountdown.Text == "总剩余 05:00" && journey.Countdown.Text == "01:00", "Total resets on step transition");
+                Check(Math.Abs(journey.TotalProgress.Value - 200d / 7) < .001, "Total progress does not span session");
+                Check(!ReferenceEquals(movementArt, journey.RestArt.Source), "Scenes reuse identical illustration");
+                Capture(journey, "29-office-total-progress");
+                journey.PauseForInterruption(); journey.Tick(TimeSpan.FromSeconds(10));
+                Check(journey.TotalCountdown.Text == "总剩余 05:00" && journey.JourneyNote.Text.Contains("已暂停"), "Total advances while paused");
+                journey.Close();
                 var skip = new BreakWindow(BreakKind.Movement, true, false, TimeSpan.Zero, false);
                 windows.Add(skip); skip.Show(); var skippedCredit = 0; skip.Completed += _ => skippedCredit++;
                 Click(skip, "StartButton"); for (var i = 0; i < 6; i++) Click(skip, "SkipButton");
@@ -149,8 +161,12 @@ internal static class SmokeTest
                 if (Motion.Enabled)
                 {
                     Check(animated.SceneContent.HasAnimatedProperties, "Entrance has no animation clock");
-                    Capture(animated, "18-motion-start"); Pump(130); Capture(animated, "19-motion-middle");
+                    Capture(animated, "18-motion-start");
+                    // PNG encoding can outlast the 320 ms entrance on CI. Start a fresh
+                    // production animation and sample before doing any screenshot I/O.
+                    Motion.Reveal(animated.SceneContent); Pump(130);
                     Check(animated.SceneContent.Opacity > 0 && animated.SceneContent.Opacity < 1, "Entrance did not interpolate");
+                    Capture(animated, "19-motion-middle");
                     Pump(450); Capture(animated, "20-motion-settled");
                     Check(animated.SceneContent.Opacity == 1, "Entrance did not settle");
                     Motion.Reveal(animated.SceneContent); Motion.Configure(true);

@@ -32,7 +32,7 @@ public partial class BreakWindow : Window
         if (kind == BreakKind.Eyes)
         {
             Width = 720; Height = 700;
-            RestArt.Source = (ImageSource)FindResource("SanctuaryArt");
+            RestArt.Source = RestArtwork.For(RestScene.Distance);
             Heading.Text = "目光，放远一点";
             Instruction.Text = "准备好后，看向窗外或远处 20 秒。结束时可播放提示音，不必盯着屏幕。";
             StartButton.Content = "开始 20 秒远眺";
@@ -50,7 +50,7 @@ public partial class BreakWindow : Window
         if (strict)
         {
             ExitButton.Content = "紧急退出 · Esc";
-            Footnote.Text = "休息结束会自动返回 · 不适请停止活动 · Esc 打开紧急退出";
+            Footnote.Text = "不适请停止活动 · 结束后自动返回";
         }
         Loaded += (_, _) =>
         {
@@ -78,6 +78,8 @@ public partial class BreakWindow : Window
             foreach (var cover in _covers) cover.Release();
             _covers.Clear(); Ended?.Invoke(_session);
         };
+        RestArt.Source = RestArtwork.For(kind == BreakKind.Eyes ? RestScene.Distance : RestScene.Movement);
+        RenderJourney();
         RenderRoute();
         SizeChanged += (_, _) => FitScene();
         StateChanged += (_, _) => { if (WindowState == WindowState.Minimized) PauseForInterruption(); };
@@ -92,7 +94,8 @@ public partial class BreakWindow : Window
         _routeIndex = -1;
         RestArt.Visibility = Visibility.Visible;
         StateBadge.Visibility = Visibility.Collapsed;
-        NextStep.Visibility = StepLabel.Visibility = Visibility.Visible;
+        NextStep.Visibility = Visibility.Collapsed;
+        StepLabel.Visibility = Visibility.Collapsed;
         Countdown.FontSize = 48;
         TimerCaption.Text = "当前环节剩余";
         if (_strict || _session.Kind != BreakKind.Eyes) WindowPlacement.Place(this, true, false);
@@ -101,7 +104,7 @@ public partial class BreakWindow : Window
         PauseButton.Visibility = _strict ? Visibility.Collapsed : Visibility.Visible;
         SkipButton.Visibility = _strict || _session.Kind == BreakKind.Eyes ? Visibility.Collapsed : Visibility.Visible;
         AlternativeButton.Visibility = _strict && _session.Kind != BreakKind.Eyes ? Visibility.Visible : Visibility.Collapsed;
-        Progress.Visibility = Visibility.Visible;
+        Progress.Visibility = Visibility.Collapsed;
         Render();
         Motion.Reveal(SceneContent);
         if (_strict) ExitButton.Focus(); else PauseButton.Focus();
@@ -140,6 +143,7 @@ public partial class BreakWindow : Window
 
     private void Render()
     {
+        RenderJourney();
         if (_session.Finished)
         {
             if (_finishing) return;
@@ -152,7 +156,7 @@ public partial class BreakWindow : Window
                 return;
             }
             if (_session.FullyCompleted && _sound) System.Media.SystemSounds.Asterisk.Play();
-            RestArt.Source = (ImageSource)FindResource("SanctuaryArt");
+            RestArt.Source = RestArtwork.For(RestScene.Distance);
             RestArt.Visibility = Visibility.Visible;
             StateBadge.Visibility = Visibility.Visible;
             Countdown.FontSize = 44;
@@ -193,7 +197,7 @@ public partial class BreakWindow : Window
         if (_strict && _session.Kind == BreakKind.Eyes) NextStep.Text = "不必盯着屏幕 · 结束时自动返回";
         if (_session.RestOnly) NextStep.Text = "无需继续动作 · 安静休息不记为完整身体活动";
         Countdown.Text = TimeSpan.FromSeconds(Math.Ceiling((_session.RestOnly
-            ? Programs.Duration(_session.Kind) - _session.Observed : _session.Remaining).TotalSeconds)).ToString(@"mm\:ss");
+            ? _session.TotalRemaining : _session.Remaining).TotalSeconds)).ToString(@"mm\:ss");
         Progress.Value = _session.RestOnly ? 100 * _session.Observed.TotalSeconds / Programs.Duration(_session.Kind).TotalSeconds : 100 * _session.StepElapsed.TotalSeconds / exercise.Seconds;
         SessionRing.Value = Progress.Value / 100;
         TimerCaption.Text = _session.Paused ? "已暂停" : _session.RestOnly ? "安静休息剩余" : "当前环节剩余";
@@ -202,12 +206,32 @@ public partial class BreakWindow : Window
         StepLabel.Text = _strict
             ? $"{_session.Index + 1} / {_session.Exercises.Count} · 还有 {Math.Ceiling((Programs.Duration(_session.Kind) - _session.Observed).TotalSeconds)} 秒自动返回"
             : $"{_session.Index + 1} / {_session.Exercises.Count} · 已活动 {(int)_session.Observed.TotalSeconds} 秒";
-        foreach (var cover in _covers) cover.Update(Heading.Text, StepLabel.Text, Background);
+        foreach (var cover in _covers) cover.Update(Heading.Text, TotalCountdown.Text, Background, RestArt.Source, TotalProgress.Value);
+    }
+
+    private void RenderJourney()
+    {
+        var total = Programs.Duration(_session.Kind).TotalSeconds;
+        var finished = _session.Finished;
+        var elapsed = finished ? _session.Observed.TotalSeconds : _session.TimelineElapsed.TotalSeconds;
+        TotalProgress.Value = Math.Clamp(100 * elapsed / total, 0, 100);
+        var remaining = TimeSpan.FromSeconds(Math.Ceiling(_session.TotalRemaining.TotalSeconds));
+        TotalCountdown.Text = finished ? $"实际休息 {_session.Observed:mm\\:ss}" : $"总剩余 {remaining:mm\\:ss}";
+        JourneyLabel.Text = finished ? (_session.FullyCompleted ? "本次休息已完成" : "流程结束 · 未完整完成")
+            : _session.RestOnly ? "安静休息" : $"动作 {_session.Index + 1} / {_session.Exercises.Count}";
+        JourneyNote.Text = finished ? "以上进度按实际休息时长显示。"
+            : _session.Paused ? "已暂停 · 当前环节与整场计时均已停止"
+            : !_started ? $"预计 {Programs.Duration(_session.Kind):mm\\:ss} · 准备好后开始"
+            : _session.TimelineElapsed > _session.Observed ? $"已跳过部分动作 · 实际休息 {_session.Observed:mm\\:ss} · 不记为完整活动"
+            : _strict ? "结束后自动返回工作" : "按自己的节奏来 · 环节切换时总进度会继续前进";
+        JourneyPanel.Visibility = _session.Kind == BreakKind.Eyes ? Visibility.Collapsed : Visibility.Visible;
+        JourneyNote.Visibility = _session.Paused || (finished && !_session.FullyCompleted) || _session.TimelineElapsed > _session.Observed
+            ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void RenderRoute()
     {
-        RoutePanel.Visibility = _session.Kind == BreakKind.Eyes || _session.RestOnly || _session.Finished ? Visibility.Collapsed : Visibility.Visible;
+        RoutePanel.Visibility = ActualHeight < 860 || _session.Kind == BreakKind.Eyes || _session.RestOnly || _session.Finished ? Visibility.Collapsed : Visibility.Visible;
         if (_routeIndex == _session.Index) return;
         _routeIndex = _session.Index;
         RouteHeading.Text = _started ? "此刻与接下来" : "活动预告 · 前三个环节";
@@ -221,13 +245,15 @@ public partial class BreakWindow : Window
 
     private void FitScene()
     {
+        RenderRoute();
         var wide = ActualWidth >= 760;
         ScenicPanel.Visibility = wide ? Visibility.Visible : Visibility.Collapsed;
         SceneryColumn.Width = wide ? new GridLength(.85, GridUnitType.Star) : new GridLength(0);
-        var compact = ActualHeight < 720;
-        TimerFace.Width = TimerFace.Height = compact ? 168 : ActualWidth > 1400 ? 250 : 204;
-        Heading.FontSize = wide ? 34 : 30;
-        Countdown.FontSize = compact ? 42 : 48;
+        var compact = ActualHeight < 860;
+        TimerFace.Width = 280;
+        TimerFace.Height = compact ? 140 : 170;
+        Heading.FontSize = wide ? 38 : 30;
+        Countdown.FontSize = compact ? 68 : 80;
     }
 
     private void ApplyScene(RestScene scene)
@@ -245,7 +271,7 @@ public partial class BreakWindow : Window
         Motion.TrackClock(brush, SolidColorBrush.ColorProperty);
         if (Motion.Enabled && previous is { } from)
             brush.BeginAnimation(SolidColorBrush.ColorProperty, new System.Windows.Media.Animation.ColorAnimation(from, next, TimeSpan.FromMilliseconds(600)) { FillBehavior = System.Windows.Media.Animation.FillBehavior.Stop });
-        RestArt.Source = (ImageSource)FindResource("SanctuaryArt");
+        RestArt.Source = RestArtwork.For(scene);
         RestArt.Visibility = Visibility.Visible;
         StateBadge.Visibility = Visibility.Collapsed;
         (SceneName.Text, SceneNote.Text) = scene switch
