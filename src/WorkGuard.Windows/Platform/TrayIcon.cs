@@ -15,21 +15,7 @@ internal sealed class TrayIcon : IDisposable
 
     public TrayIcon(AppController app)
     {
-        // A native vector-drawn leaf mark; no external assets or network dependencies.
-        using var bitmap = new Drawing.Bitmap(32, 32);
-        using (var g = Drawing.Graphics.FromImage(bitmap))
-        {
-            g.SmoothingMode = Drawing.Drawing2D.SmoothingMode.AntiAlias;
-            g.Clear(Drawing.Color.Transparent);
-            using var green = new Drawing.SolidBrush(Drawing.Color.FromArgb(50, 105, 88));
-            using var white = new Drawing.Pen(Drawing.Color.White, 2.4f);
-            g.FillEllipse(green, 1, 1, 30, 30);
-            g.DrawArc(white, 9, 7, 14, 17, 30, 220);
-            g.DrawLine(white, 13, 23, 20, 10);
-        }
-        var handle = bitmap.GetHicon();
-        try { using var native = Drawing.Icon.FromHandle(handle); _drawingIcon = (Drawing.Icon)native.Clone(); }
-        finally { DestroyIcon(handle); }
+        _drawingIcon = LoadApplicationIcon();
 
         _menu.Items.Add(_status);
         _menu.Items.Add(_detail);
@@ -53,6 +39,21 @@ internal sealed class TrayIcon : IDisposable
         _icon.BalloonTipClicked += (_, _) => app.ShowDashboard();
     }
 
+    private static Drawing.Icon LoadApplicationIcon()
+    {
+        if (!string.IsNullOrWhiteSpace(Environment.ProcessPath))
+        {
+            var associated = Drawing.Icon.ExtractAssociatedIcon(Environment.ProcessPath);
+            if (associated is not null)
+            {
+                using (associated) return (Drawing.Icon)associated.Clone();
+            }
+        }
+
+        // Defensive fallback for unusual hosts; normal packaged builds use the EXE icon.
+        return (Drawing.Icon)Drawing.SystemIcons.Application.Clone();
+    }
+
     public void Update(string status, string detail, bool paused, bool meeting)
     {
         _status.Text = status;
@@ -64,7 +65,4 @@ internal sealed class TrayIcon : IDisposable
 
     public void Notify(string title, string message) => _icon.ShowBalloonTip(5000, title, message, Forms.ToolTipIcon.Info);
     public void Dispose() { _icon.Visible = false; _icon.Dispose(); _menu.Dispose(); _drawingIcon.Dispose(); }
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
-    private static extern bool DestroyIcon(IntPtr handle);
 }

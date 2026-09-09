@@ -7,6 +7,7 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <ImplicitUsings>disable</ImplicitUsings>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\WorkGuard.ico</ApplicationIcon>
     <AssemblyName>WorkGuard</AssemblyName>
     <Version>0.9.0-preview.2</Version>
     <Product>工作防沉迷</Product>
@@ -17,4 +18,7 @@
     <ProjectReference Include="../WorkGuard.Core/WorkGuard.Core.csproj" />
     <ProjectReference Include="../WorkGuard.Data/WorkGuard.Data.csproj" />
   </ItemGroup>
+  <Target Name="GenerateWorkGuardIcon" BeforeTargets="PrepareForBuild" Condition="'$(OS)' == 'Windows_NT'">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\generate-app-icon.ps1&quot; -Output &quot;$(MSBuildProjectDirectory)\Assets\WorkGuard.ico&quot;" />
+  </Target>
 </Project>
