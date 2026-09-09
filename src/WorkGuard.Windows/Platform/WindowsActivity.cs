@@ -7,6 +7,9 @@ namespace WorkGuard.Windows.Platform;
 
 internal static class WindowsActivity
 {
+    private const string StartupValueName = "WorkGuard";
+    private const string RunKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
+
     [StructLayout(LayoutKind.Sequential)]
     private struct LastInput { public uint Size; public uint Tick; }
     [StructLayout(LayoutKind.Sequential)]
@@ -26,7 +29,6 @@ internal static class WindowsActivity
     {
         var input = new LastInput { Size = (uint)Marshal.SizeOf<LastInput>() };
         if (!GetLastInputInfo(ref input)) return null;
-        // LASTINPUTINFO and GetTickCount are 32-bit; subtraction must wrap together.
         return TimeSpan.FromMilliseconds(unchecked((uint)Environment.TickCount - input.Tick));
     }
 
@@ -43,26 +45,43 @@ internal static class WindowsActivity
 
     public static string? StartupCommand()
     {
-        using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run");
-        return key?.GetValue("WorkGuard") as string;
+        using var key = Registry.CurrentUser.OpenSubKey(RunKeyPath);
+        return key?.GetValue(StartupValueName) as string;
     }
+
     public static void RestoreStartup(string? command)
     {
-        using var key = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run");
-        if (command is null) key.DeleteValue("WorkGuard", false); else key.SetValue("WorkGuard", command);
+        using var key = Registry.CurrentUser.CreateSubKey(RunKeyPath);
+        if (command is null) key.DeleteValue(StartupValueName, false);
+        else key.SetValue(StartupValueName, command, RegistryValueKind.String);
+    }
+
+    public static void ReconcileStartup(bool enabled)
+    {
+        var current = StartupCommand();
+        if (!enabled)
+        {
+            if (current is not null) SetStartup(false);
+            return;
+        }
+
+        var desired = StartupCommandForCurrentExecutable();
+        if (!string.Equals(current, desired, StringComparison.Ordinal)) SetStartup(true);
     }
 
     public static void SetStartup(bool enabled)
     {
-        using var key = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run");
-        if (enabled)
-        {
-            var executable = Environment.ProcessPath ?? throw new IOException("无法取得程序路径。");
-            if (!string.Equals(Path.GetFileName(executable), "WorkGuard.exe", StringComparison.OrdinalIgnoreCase))
-                throw new IOException("请从发布后的 WorkGuard.exe 开启开机启动。");
-            key.SetValue("WorkGuard", $"\"{executable}\"");
-        }
-        else key.DeleteValue("WorkGuard", throwOnMissingValue: false);
+        using var key = Registry.CurrentUser.CreateSubKey(RunKeyPath);
+        if (enabled) key.SetValue(StartupValueName, StartupCommandForCurrentExecutable(), RegistryValueKind.String);
+        else key.DeleteValue(StartupValueName, throwOnMissingValue: false);
+    }
+
+    private static string StartupCommandForCurrentExecutable()
+    {
+        var executable = Environment.ProcessPath ?? throw new IOException("无法取得程序路径。");
+        if (!string.Equals(Path.GetFileName(executable), "WorkGuard.exe", StringComparison.OrdinalIgnoreCase))
+            throw new IOException("请从发布后的 WorkGuard.exe 开启开机启动。");
+        return $"\"{Path.GetFullPath(executable)}\"";
     }
 
     public static void OpenDataFolder(string path)
