@@ -172,6 +172,27 @@
           </StackPanel>
         </ScrollViewer>
       </TabItem>
+      <TabItem x:Name="MaintenanceTab" Header="身体维护" ui:Visuals.Glyph="&#xE916;">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Margin="16,20,20,0">
+            <TextBlock Text="每天一点，按自己的情况来" FontSize="20" FontWeight="SemiBold"/>
+            <CheckBox x:Name="MaintenanceEnabled" Content="把每日维护安排进身体休息提醒" Margin="0,18,0,8"/>
+            <TextBlock Text="沿用身体休息周期与静默设置，不额外叠加提醒。升级后默认关闭，可先手动体验。" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
+            <WrapPanel Margin="0,18,0,12"><TextBlock Text="每日跟练目标（5–10 分钟）" VerticalAlignment="Center"/><TextBox x:Name="MaintenanceGoal" Width="70" Margin="16,0" AutomationProperties.Name="每日跟练目标，5至10分钟"/></WrapPanel>
+            <TextBlock Text="准备和暂停不计入目标；每段会显示包含准备的预计总时长。" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
+            <CheckBox x:Name="MaintenanceStanding" Content="可以站立，并能使用稳固桌面或无滚轮椅子" Margin="0,18,0,10"/>
+            <CheckBox x:Name="MaintenanceVoice" Content="使用已安装的 Windows 中文语音引导" Margin="0,0,0,10"/>
+            <TextBlock Text="没有可用语音时，仍可按文字与动作示意完成；不会下载语音。" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
+            <TextBlock Text="安排哪些部位" FontSize="18" FontWeight="SemiBold" Margin="0,24,0,10"/>
+            <WrapPanel x:Name="MaintenanceAreaChoices"/>
+            <CheckBox Content="允许温和颈部动作（默认关闭）" IsChecked="{Binding IsChecked, ElementName=Neck, Mode=TwoWay}" Margin="0,10"/>
+            <TextBlock Text="已有疾病、近期伤病或医生限制时，请避开不适合的动作。颈部动作不是康复处方。" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
+            <TextBlock Text="因不适而暂停的动作" FontSize="18" FontWeight="SemiBold" Margin="0,24,0,10"/>
+            <TextBlock x:Name="BlockedHint" Foreground="{StaticResource MutedBrush}" FontSize="12"/>
+            <StackPanel x:Name="BlockedExercises" Margin="0,8,0,12"/>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
     </TabControl>
   </DockPanel>
 </Window>

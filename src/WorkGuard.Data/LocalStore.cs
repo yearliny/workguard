@@ -5,6 +5,7 @@ namespace WorkGuard.Data;
 
 public sealed class DayStats
 {
+    public Dictionary<BodyArea, double> MaintenanceSeconds { get; set; } = [];
     public DateOnly Date { get; set; }
     public double ActiveSeconds { get; set; }
     public double LongestSeconds { get; set; }
@@ -15,7 +16,7 @@ public sealed class DayStats
 
 public sealed class StoredState
 {
-    public int SchemaVersion { get; set; } = 1;
+    public int SchemaVersion { get; set; } = 2;
     public Preferences Preferences { get; set; } = new();
     public List<DayStats> Days { get; set; } = [];
     public DateOnly? LastOfficeReminderDate { get; set; }
@@ -36,7 +37,7 @@ public sealed class LocalStore(string directory)
         {
             var state = JsonSerializer.Deserialize<StoredState>(File.ReadAllText(_path))
                 ?? throw new JsonException("Empty state");
-            if (state.SchemaVersion != 1)
+            if (state.SchemaVersion is not (1 or 2))
             {
                 ReadOnly = true;
                 LoadWarning = "数据来自其他版本，本次以只读方式运行，避免覆盖。请使用更新版本。";
@@ -45,9 +46,12 @@ public sealed class LocalStore(string directory)
             if (state.Preferences is null || state.Days is null ||
                 state.Days.Any(d => d is null || !double.IsFinite(d.ActiveSeconds) ||
                     !double.IsFinite(d.LongestSeconds) || d.ActiveSeconds < 0 || d.LongestSeconds < 0 ||
-                    d.EyeBreaks < 0 || d.MovementBreaks < 0 || d.OfficeBreaks < 0) ||
+                    d.EyeBreaks < 0 || d.MovementBreaks < 0 || d.OfficeBreaks < 0 ||
+                    d.MaintenanceSeconds is null || d.MaintenanceSeconds.Any(x =>
+                        !Enum.IsDefined(x.Key) || x.Key is BodyArea.None or BodyArea.All || !double.IsFinite(x.Value) || x.Value < 0 || x.Value > 86400)) ||
                 state.Days.Select(d => d.Date).Distinct().Count() != state.Days.Count)
                 throw new JsonException("Invalid state");
+            state.SchemaVersion = 2;
             state.Preferences = state.Preferences.Validate();
             return state;
         }

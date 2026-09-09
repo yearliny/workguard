@@ -267,6 +267,7 @@ internal static class SmokeTest
                 unwritable.Advance(TimeSpan.FromSeconds(1), noon, TimeSpan.Zero, false);
                 Check(unwritable.DataError is not null && unwritable.State.LastOfficeReminderDate is null, "Failed save falsely marked invitation delivered");
                 Check(!Application.Current.Windows.OfType<ReminderWindow>().Any(w => w.IsVisible), "Invitation displayed before durable reservation");
+                VerifyMaintenance(folder, windows);
                 File.WriteAllText(resultFile, "PASS: WPF views, layout, settings validation, reminder focus policy, pause, completion, skip, tray, input API, foreground detection");
             }
             catch (Exception error)
@@ -276,10 +277,68 @@ internal static class SmokeTest
             finally
             {
                 Motion.SystemAnimationOverride = null; Motion.Configure(true);
-                foreach (var window in windows) if (window.IsLoaded) { if (window is BreakWindow breakWindow) breakWindow.CloseForSystem(); else window.Close(); }
+                foreach (var window in windows) if (window.IsLoaded) { if (window is BreakWindow breakWindow) breakWindow.CloseForSystem(); else if (window is MaintenanceWindow maintenanceWindow) maintenanceWindow.CloseForSystem(); else window.Close(); }
                 if (Directory.Exists(folder)) Directory.Delete(folder, recursive: true);
             }
             Application.Current.Shutdown(0);
         }));
     }
+    private static void VerifyMaintenance(string folder, List<Window> windows)
+    {
+        using var app = new AppController(Path.Combine(folder, "maintenance"));
+        app.State.Preferences = new Preferences { OnboardingComplete = true, MaintenanceEnabled = true, MaintenanceVoice = false };
+        app.Engine.Configure(app.State.Preferences);
+        var now = new DateTimeOffset(DateTime.Today.AddHours(9));
+        app.Advance(TimeSpan.FromSeconds(1), now, TimeSpan.Zero, false);
+        var dashboard = new DashboardWindow(app); windows.Add(dashboard); dashboard.Show();
+        dashboard.Sections.SelectedItem = dashboard.MaintenanceTab; Capture(dashboard, "30-maintenance-today");
+        var settings = new SettingsWindow(app); windows.Add(settings); settings.Show();
+        settings.Sections.SelectedItem = settings.MaintenanceTab; Capture(settings, "31-maintenance-preferences"); settings.Close();
+        app.StartMaintenance(false);
+        var window = Application.Current.Windows.OfType<MaintenanceWindow>().Single(); windows.Add(window);
+        Check(!window.HasStarted && window.Countdown.Text == "02:10", "Maintenance estimate excludes preparation");
+        Click(window, "StartButton");
+        for (var i = 0; i < 12; i++) app.Advance(TimeSpan.FromSeconds(1), now = now.AddSeconds(1), TimeSpan.Zero, false);
+        Capture(window, "32-maintenance-guidance");
+        Check(window.Session.ObservedPractice == 7, "Preparation counted as practice");
+        app.Advance(TimeSpan.FromSeconds(1), now = now.AddSeconds(1), TimeSpan.Zero, false, unavailable: true);
+        var before = window.Session.ObservedPractice;
+        app.Advance(TimeSpan.FromSeconds(10), now = now.AddSeconds(10), TimeSpan.Zero, false);
+        Check(window.Session.Paused && window.Session.ObservedPractice == before, "Unlock auto-resumes maintenance");
+        Click(window, "PauseButton");
+        app.Advance(TimeSpan.FromSeconds(60), now = now.AddSeconds(60), TimeSpan.Zero, false);
+        Check(window.Session.Paused && window.Session.ObservedPractice == before, "Long gap credited maintenance");
+        Click(window, "PauseButton");
+        for (var i = 0; i < 118; i++) app.Advance(TimeSpan.FromSeconds(1), now = now.AddSeconds(1), TimeSpan.Zero, false);
+        Check(window.Session.FullyPracticed && !window.Topmost && window.WindowStyle == WindowStyle.SingleBorderWindow,
+            "Completion did not release fullscreen before confirmation");
+        Check(app.State.Days.Sum(d => d.MaintenanceSeconds.Values.Sum()) == 0, "Playback granted maintenance credit");
+        Capture(window, "33-maintenance-confirmation"); Click(window, "ConfirmButton");
+        Check(app.State.Days.Sum(d => d.MaintenanceSeconds.Values.Sum()) == 120 && !window.IsVisible, "Confirmed maintenance not credited exactly once");
+        Check(app.State.Days.Sum(d => d.OfficeBreaks + d.MovementBreaks) == 0, "Maintenance double-counted generic activity");
+        Check(app.MaintenancePlan(true).Sum(s => s.Seconds) == 360, "Concentrated maintenance did not resume today's plan");
+        app.StartMaintenance(false, strict: true);
+        window = Application.Current.Windows.OfType<MaintenanceWindow>().Single(); windows.Add(window);
+        var blocked = window.Session.Current.Exercise.Id;
+        Check(window.HasStarted && window.DiscomfortButton.IsVisible && window.PauseButton.Visibility == Visibility.Collapsed, "Strict maintenance safety controls missing");
+        Click(window, "DiscomfortButton");
+        Check(!window.IsVisible && app.State.Preferences.MaintenanceBlockedExercises.Contains(blocked), "Discomfort failed to exit and block action");
+        Check(app.MaintenancePlan(true).All(s => s.Exercise.Id != blocked), "Blocked action returned in plan");
+        using (var reopened = new AppController(Path.Combine(folder, "maintenance")))
+            Check(reopened.State.Preferences.MaintenanceBlockedExercises.Contains(blocked) && reopened.State.Days.Sum(d => d.MaintenanceSeconds.Values.Sum()) == 120, "Maintenance state lost on restart");
+        Capture(dashboard, "34-maintenance-progress"); dashboard.Close();
+        var blockedPath = Path.Combine(folder, "maintenance-write-failure");
+        File.WriteAllText(blockedPath, "occupied");
+        using var failure = new AppController(blockedPath);
+        failure.State.Preferences = new Preferences { OnboardingComplete = true, MaintenanceVoice = false };
+        failure.StartMaintenance(false, beginImmediately: true);
+        var failingWindow = Application.Current.Windows.OfType<MaintenanceWindow>().Single(); windows.Add(failingWindow);
+        for (var i = 0; i < 130; i++) failure.Advance(TimeSpan.FromSeconds(1), now = now.AddSeconds(1), TimeSpan.Zero, false);
+        Click(failingWindow, "ConfirmButton");
+        Check(failure.DataError is not null && failure.State.Days.Sum(d => d.MaintenanceSeconds.Values.Sum()) == 120, "Failed save lost in-memory confirmed maintenance");
+        File.Delete(blockedPath); Check(failure.Save(), "Maintenance save did not recover");
+        using var recovered = new AppController(blockedPath);
+        Check(recovered.State.Days.Sum(d => d.MaintenanceSeconds.Values.Sum()) == 120, "Retry duplicated or lost maintenance credit");
+    }
+
 }

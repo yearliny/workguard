@@ -47,6 +47,24 @@ public partial class DashboardWindow : Window
         if (!_app.State.Preferences.OnboardingComplete) NextText.Text = "先完成快速配置，开启适合你的休息提醒。";
         if (_app.LastCompletion is not null) TimingHint.Text = _app.LastCompletion;
         var p = _app.State.Preferences;
+        var confirmed = today.MaintenanceSeconds.Values.Sum();
+        var plan = _app.MaintenancePlan(false);
+        var fullPlan = _app.MaintenancePlan(true);
+        var allowedAreas = MaintenanceCatalog.Allowed(p).Select(e => e.Area).ToHashSet();
+        MaintenanceQuickSummary.Text = $"今日已确认 {confirmed / 60:0.#} / {p.MaintenanceGoalMinutes} 分钟";
+        MaintenanceProgressText.Text = $"已确认跟练 {confirmed / 60:0.#} / {p.MaintenanceGoalMinutes} 分钟";
+        MaintenanceProgress.Value = Math.Min(100, confirmed / (p.MaintenanceGoalMinutes * 60) * 100);
+        MaintenanceNext.Text = plan.Count > 0 ? "接下来 · " + string.Join("、", plan.Select(x => MaintenanceCatalog.Label(x.Exercise.Area)).Distinct()) :
+            allowedAreas.Count == 0 ? "当前没有可安排的动作，请在维护偏好中调整。" : "今日维护目标已完成。工作间隙仍记得走动与远望。";
+        ShortMaintenanceButton.IsEnabled = FullMaintenanceButton.IsEnabled = plan.Count > 0;
+        ShortMaintenanceButton.Content = plan.Count > 0 ? "短维护 · " + TimeSpan.FromSeconds(plan.Sum(x => x.TotalSeconds)).ToString(@"mm\:ss") : "短维护";
+        FullMaintenanceButton.Content = fullPlan.Count > 0 ? "今日剩余 · " + TimeSpan.FromSeconds(fullPlan.Sum(x => x.TotalSeconds)).ToString(@"mm\:ss") : "今日已完成";
+        MaintenanceScheduleNote.Text = (p.MaintenanceEnabled ? "短维护已融入身体休息提醒。" : "可手动开始；在维护偏好中开启自动安排。") + " 按钮时长包含准备。";
+        MovementAction.Content = p.MaintenanceEnabled && plan.Count > 0 ? "现在做一段短维护" : "现在活动 3 分钟";
+        MaintenanceAreas.ItemsSource = new[] { BodyArea.Thoracic, BodyArea.Shoulders, BodyArea.Hips, BodyArea.BackLegs, BodyArea.Ankles, BodyArea.Neck }
+            .Select(area => new { Name = MaintenanceCatalog.Label(area), Status = today.MaintenanceSeconds.GetValueOrDefault(area) > 0
+                ? "已确认 " + TimeSpan.FromSeconds(today.MaintenanceSeconds[area]).ToString(@"mm\:ss") + (allowedAreas.Contains(area) ? "" : " · 目前不安排")
+                : allowedAreas.Contains(area) ? "今天尚未跟练" : "不安排" }).ToArray();
         DeliveryTitle.Text = _app.Status;
         DeliveryExplanation.Text = _app.DeliveryDetail;
         ScheduleSummary.Text = p.WorkScheduleEnabled
@@ -87,7 +105,8 @@ public partial class DashboardWindow : Window
             var day = _app.State.Days.FirstOrDefault(d => d.Date == date);
             return new { Date = date.ToString("MM-dd"), Active = day is null ? "—" : Time(day.ActiveSeconds),
                 Longest = day is null ? "—" : $"{(int)(day.LongestSeconds / 60)} 分钟",
-                Breaks = day is null ? "—" : $"{day.MovementBreaks + day.OfficeBreaks} / {day.EyeBreaks}" };
+                Breaks = day is null ? "—" : $"{day.MovementBreaks + day.OfficeBreaks} / {day.EyeBreaks}",
+                Maintenance = day is null ? "—" : $"{day.MaintenanceSeconds.Values.Sum() / 60:0.#} 分钟" };
         }).ToArray();
     }
     private void Restore_Click(object sender, RoutedEventArgs e) => _app.RestoreBackup();
@@ -97,6 +116,10 @@ public partial class DashboardWindow : Window
     private void Schedule_Click(object sender, RoutedEventArgs e) => _app.ShowScheduleSettings();
     private void Movement_Click(object sender, RoutedEventArgs e) => _app.StartBreak(BreakKind.Movement);
     private void Eyes_Click(object sender, RoutedEventArgs e) => _app.StartBreak(BreakKind.Eyes);
+    private void Maintenance_Click(object sender, RoutedEventArgs e) => _app.ShowMaintenance();
+    private void MaintenanceSettings_Click(object sender, RoutedEventArgs e) => _app.ShowMaintenanceSettings();
+    private void ShortMaintenance_Click(object sender, RoutedEventArgs e) => _app.StartMaintenance(false);
+    private void FullMaintenance_Click(object sender, RoutedEventArgs e) => _app.StartMaintenance(true);
     private void Office_Click(object sender, RoutedEventArgs e) => _app.StartBreak(BreakKind.Office);
     private void Pause_Click(object sender, RoutedEventArgs e) => _app.TogglePause();
 }

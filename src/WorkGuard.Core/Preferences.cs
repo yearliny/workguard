@@ -2,6 +2,12 @@ namespace WorkGuard.Core;
 
 public sealed record Preferences
 {
+    public bool MaintenanceEnabled { get; init; }
+    public int MaintenanceGoalMinutes { get; init; } = 8;
+    public bool MaintenanceStanding { get; init; } = true;
+    public bool MaintenanceVoice { get; init; } = true;
+    public BodyArea MaintenanceExcludedAreas { get; init; }
+    public string[] MaintenanceBlockedExercises { get; init; } = [];
     public int EyeIntervalMinutes { get; init; } = 20;
     public int MovementIntervalMinutes { get; init; } = 60;
     public int NaturalRestMinutes { get; init; } = 5;
@@ -31,6 +37,9 @@ public sealed record Preferences
 
     public Preferences Validate() => this with
     {
+        MaintenanceGoalMinutes = Math.Clamp(MaintenanceGoalMinutes, 5, 10),
+        MaintenanceExcludedAreas = MaintenanceExcludedAreas & BodyArea.All,
+        MaintenanceBlockedExercises = (MaintenanceBlockedExercises ?? []).Where(id => MaintenanceCatalog.All.Any(e => e.Id == id)).Distinct().ToArray(),
         EyeIntervalMinutes = Math.Clamp(EyeIntervalMinutes, 10, 60),
         MovementIntervalMinutes = Math.Clamp(MovementIntervalMinutes, 30, 120),
         NaturalRestMinutes = Math.Clamp(NaturalRestMinutes, 3, 15),

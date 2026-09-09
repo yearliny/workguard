@@ -442,12 +442,12 @@ var tests = new (string Name, Action Run)[]
 };
 
 var failed = 0;
-foreach (var (name, run) in tests)
+foreach (var (name, run) in tests.Concat(MaintenanceTests.All))
 {
     try { run(); Console.WriteLine($"PASS {name}"); }
     catch (Exception error) { failed++; Console.Error.WriteLine($"FAIL {name}: {error.Message}"); }
 }
-Console.WriteLine($"{tests.Length - failed}/{tests.Length} passed");
+Console.WriteLine($"{tests.Length + MaintenanceTests.All.Length - failed}/{tests.Length + MaintenanceTests.All.Length} passed");
 return failed == 0 ? 0 : 1;
 
 static BreakEngine Engine() => new(new Preferences());
