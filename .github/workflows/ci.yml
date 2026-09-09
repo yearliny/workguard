@@ -56,6 +56,16 @@ jobs:
       - name: Package lightweight Windows app
         shell: pwsh
         run: ./scripts/publish.ps1 -Runtime win-x64 -SkipTests
+      - name: Install Inno Setup compiler
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup --yes --no-progress
+            if ($LASTEXITCODE -ne 0) { throw 'Unable to install Inno Setup.' }
+          }
+      - name: Build self-contained Windows installer
+        shell: pwsh
+        run: ./scripts/installer.ps1 -Runtime win-x64 -SkipTests
       - name: Verify packaged application
         shell: pwsh
         run: |
@@ -65,6 +75,7 @@ jobs:
           name: WorkGuard-${{ steps.version.outputs.version }}-win-x64
           path: |
             artifacts/WorkGuard-${{ steps.version.outputs.version }}-win-x64-*.zip
+            artifacts/WorkGuard-${{ steps.version.outputs.version }}-win-x64-setup.exe
             artifacts/SHA256SUMS-win-x64.txt
           if-no-files-found: error
           retention-days: 30
