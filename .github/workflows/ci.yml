@@ -83,6 +83,8 @@ jobs:
     needs: windows
     if: (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    outputs:
+      published: ${{ steps.publish.outputs.published }}
     permissions:
       contents: write
     steps:
@@ -92,8 +94,38 @@ jobs:
           name: WorkGuard-${{ needs.windows.outputs.version }}-win-x64
           path: artifacts
       - name: Publish a new version after all checks pass
+        id: publish
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_VERSION: ${{ needs.windows.outputs.version }}
         run: ./scripts/release.ps1 -Repository $env:GITHUB_REPOSITORY -Commit $env:GITHUB_SHA -Version $env:RELEASE_VERSION
+  distribution:
+    needs: [windows, release]
+    if: github.ref == 'refs/heads/main' && needs.release.outputs.published == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: WorkGuard-${{ needs.windows.outputs.version }}-win-x64
+          path: artifacts
+      - name: Build public update feed
+        shell: pwsh
+        run: ./scripts/build-update-site.ps1 -Version '${{ needs.windows.outputs.version }}'
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Upload update distribution
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: artifacts/update-site
+      - name: Deploy public update distribution
+        id: deployment
+        uses: actions/deploy-pages@v4

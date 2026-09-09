@@ -5,6 +5,12 @@ param(
     [string]$ArtifactsDirectory = 'artifacts'
 )
 $ErrorActionPreference = 'Stop'
+
+function Set-PublishedOutput([bool]$value) {
+    if ($env:GITHUB_OUTPUT) { Add-Content $env:GITHUB_OUTPUT ("published=" + $value.ToString().ToLowerInvariant()) }
+}
+Set-PublishedOutput $false
+
 if ($Repository -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') { throw 'Invalid repository.' }
 if ($Commit -notmatch '^[a-f0-9]{40}$') { throw 'Expected a full commit SHA.' }
 if ($Version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') { throw 'Invalid version.' }
@@ -46,10 +52,11 @@ $notes = @"
 工作防沉迷 $Version · 每天一点，活动自如。源码：$Commit
 
 - 正式提供 Windows 安装器：单用户安装，无需管理员权限，内置 .NET 运行时，安装后可直接使用。
+- 自动更新：后台低频检查公开更新清单，发现新版本后自动下载并校验 SHA-256；用户可从系统托盘一键安装。
+- 源码仓库保持私有；公开分发端只包含安装包与最小更新清单，不暴露源码或访问令牌。
 - 同时保留 lite.zip 精简版，适合已经安装 .NET 10 Desktop Runtime 的用户。
 - 应用图标、任务栏和托盘统一为轻量品牌图标。
 - 登录 Windows 时启动支持在设置中关闭；安装目录变化后会自动修复启动项路径。
-- 身体维护、眼睛休息、强制全屏、工作时段、会议模式、本地统计和 CSV 导出继续保留。
 
 ## 下载建议
 
@@ -91,6 +98,7 @@ try {
 
     & gh release edit $tag --repo $Repository --draft=false --prerelease --latest=false
     if ($LASTEXITCODE -ne 0) { throw 'Publishing the verified draft failed.' }
+    Set-PublishedOutput $true
     Write-Host "Published https://github.com/$Repository/releases/tag/$tag"
 }
 finally {
