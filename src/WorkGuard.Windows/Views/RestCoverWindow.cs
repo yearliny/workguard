@@ -22,7 +22,7 @@ internal sealed class RestCoverWindow : Window
         panel.Children.Add(_art);
         Motion.SetEnter(panel, true);
         panel.Children.Add(_heading); panel.Children.Add(_remaining); panel.Children.Add(_progress);
-        var button = new Button { Content = "紧急退出", HorizontalAlignment = HorizontalAlignment.Center };
+        var button = new Button { Content = "紧急退出", Style = (Style)Application.Current.FindResource("RestTextButton"), HorizontalAlignment = HorizontalAlignment.Center };
         button.Click += (_, _) => emergency(); panel.Children.Add(button); Content = panel;
         Loaded += (_, _) => WindowPlacement.PlaceOnScreen(this, screen);
         KeyDown += (_, e) => { if (e.Key == Key.Escape) { emergency(); e.Handled = true; } };

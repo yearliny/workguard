@@ -20,12 +20,18 @@ internal static class RestArtwork
                 RestScene.Hands => ("#E4DFEB", "#F9F1E9", "#91819D"),
                 _ => ("#DCE6D3", "#F9F4DE", "#718568")
             };
-            c.DrawRectangle(Gradient(colors.Item2, colors.Item1), null, new Rect(0, 0, 600, 720));
-            // A quiet architectural frame and fine inset line give each composition a shared language.
-            Shape(c, "#FFFFFF", "M40,510 L40,250 C40,100 135,48 300,48 C465,48 560,100 560,250 L560,510 Z", .26);
-            var arch = Geometry.Parse("M76,510 L76,260 C76,130 164,84 300,84 C436,84 524,130 524,260 L524,510 Z");
-            c.PushClip(arch);
-            c.DrawRectangle(Gradient(colors.Item2, colors.Item1), null, new Rect(76, 84, 448, 440));
+            // Transparent layout bounds; the scene floats on the live window color.
+            c.DrawRectangle(Brushes.Transparent, null, new Rect(0, 0, 600, 720));
+            var atmosphere = new RadialGradientBrush
+            {
+                Center = new Point(.5, .45), GradientOrigin = new Point(.5, .45),
+                RadiusX = .52, RadiusY = .53,
+                GradientStops = new GradientStopCollection
+                {
+                    new(Colors.White, 0), new(Colors.White, .58), new(Colors.Transparent, 1)
+                }
+            };
+            c.PushOpacityMask(atmosphere);
             switch (scene)
             {
                 case RestScene.Distance:
@@ -66,20 +72,16 @@ internal static class RestArtwork
                     break;
             }
             c.Pop();
-            c.DrawGeometry(null, new Pen(Brush("#FFFAEF"), 2), arch);
             Shape(c, "#405C4C", "M50,562 C210,535 400,554 552,568 L552,579 C410,563 188,552 50,575 Z", .08);
-            // Foreground botanical shapes stay below the focal point and above the caption.
+            // Crisp foreground plants anchor the softly fading landscape.
             Leaf(c, 94, 565, colors.Item3);
             c.DrawRoundedRectangle(Brush("#E5D4BE"), null, new Rect(67, 540, 56, 52), 10, 10);
-            Line(c, "#FCF8EE", "M164,563 L481,563", 1);
         }
         group.Freeze();
         var image = new DrawingImage(group); image.Freeze(); return image;
     }
 
     private static SolidColorBrush Brush(string hex) => new((Color)ColorConverter.ConvertFromString(hex));
-    private static LinearGradientBrush Gradient(string top, string bottom) => new(
-        (Color)ColorConverter.ConvertFromString(top), (Color)ColorConverter.ConvertFromString(bottom), 90);
     private static void Shape(DrawingContext c, string color, string path, double opacity = 1)
     { c.PushOpacity(opacity); c.DrawGeometry(Brush(color), null, Geometry.Parse(path)); c.Pop(); }
     private static void Line(DrawingContext c, string color, string path, double width)
