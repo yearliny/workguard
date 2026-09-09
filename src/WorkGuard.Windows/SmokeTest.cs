@@ -134,9 +134,17 @@ internal static class SmokeTest
                 for (var i = 0; i < 60; i++) forced.Tick(TimeSpan.FromSeconds(1));
                 Check(forced.Heading.Text.Contains("两侧"), "Neck scene missing"); Capture(forced, "14-strict-neck");
                 forced.Close(); Check(forced.IsVisible && forced.EmergencyPanel.Visibility == Visibility.Visible, "Close bypasses strict exit confirmation");
+                beforeSkip = forced.Countdown.Text;
+                forced.Tick(TimeSpan.FromSeconds(10)); Click(forced, "PauseButton");
+                Check(!forced.IsRunning && forced.Countdown.Text == beforeSkip, "Strict exit prompt counted time or allowed resume behind prompt");
                 Capture(forced, "15-strict-emergency"); Click(forced, "ContinueButton");
+                Check(forced.IsRunning, "Canceling exit did not restore running rest");
                 forced.PauseForInterruption(); beforeSkip = forced.Countdown.Text; forced.Tick(TimeSpan.FromSeconds(10));
                 Check(!forced.IsRunning && beforeSkip == forced.Countdown.Text && forced.PauseButton.IsVisible, "Strict interruption did not require resume");
+                Click(forced, "ExitButton"); Click(forced, "ContinueButton");
+                Check(!forced.IsRunning, "Canceling exit resumed an already paused rest");
+                Click(forced, "PauseButton"); Click(forced, "ExitButton"); forced.PauseForInterruption();
+                Click(forced, "ContinueButton"); Check(!forced.IsRunning, "System interruption during exit was forgotten");
                 Click(forced, "PauseButton"); for (var i = 0; i < 120; i++) forced.Tick(TimeSpan.FromSeconds(1));
                 Check(forcedCredit == 1 && !forced.IsVisible, "Strict completion did not release window once");
                 var rest = new BreakWindow(BreakKind.Movement, true, true, TimeSpan.Zero, false, strict: true);
@@ -297,7 +305,34 @@ internal static class SmokeTest
         app.StartMaintenance(false);
         var window = Application.Current.Windows.OfType<MaintenanceWindow>().Single(); windows.Add(window);
         Check(!window.HasStarted && window.Countdown.Text == "02:10", "Maintenance estimate excludes preparation");
+        window.PreviewSelector.SelectedIndex = 1;
+        Check(window.Heading.Text == window.Session.Steps[1].Exercise.Title && window.Session.Index == 0 &&
+            window.Cue.Text.Contains(window.Session.Steps[1].Exercise.Setup), "Preview did not show selected setup or changed live session");
+        var exposureBeforePreview = app.Engine.Continuous;
+        app.Advance(TimeSpan.FromSeconds(10), now = now.AddSeconds(10), TimeSpan.Zero, false);
+        Check(window.Session.ObservedPractice == 0 && window.Session.TimelineSeconds == 0 &&
+            app.Engine.Continuous > exposureBeforePreview, "Preview awarded practice or erased work exposure");
+        Motion.SystemAnimationOverride = true; Motion.Configure(false);
+        window.PreviewSelector.SelectedIndex = 0;
+        Click(window, "PreviewMotionButton"); Pump(100);
+        Check(window.Demonstration.IsAnimating, "Preview animation did not start");
+        window.WindowState = WindowState.Minimized; Pump(30);
+        Check(!window.Demonstration.IsAnimating && !window.HasStarted, "Minimized preview kept animating or began practice");
+        window.WindowState = WindowState.Normal;
+        Click(window, "PreviewMotionButton"); window.Hide();
+        Check(!window.Demonstration.IsAnimating, "Hidden demonstration kept a rendering timer");
+        window.Show(); Motion.Configure(true); Pump(80);
+        Check(!window.Demonstration.IsAnimating, "Reduced motion kept demonstration timer");
+        window.PreviewSelector.SelectedIndex = 1; window.PreviewSelector.SelectedIndex = 0;
+        Click(window, "PreviewSideButton");
+        Check(System.Windows.Automation.AutomationProperties.GetName(window.Demonstration).Contains("右侧"), "Preview side missing from accessible guidance");
+        Capture(window, "36-maintenance-preview");
+        window.Width = 760; window.Height = 640; Capture(window, "37-maintenance-preview-compact");
+        Check(window.StartButton.IsVisible && window.PreviewSelector.IsVisible, "Compact preview hides navigation or start");
+        window.PreviewSelector.SelectedIndex = 1;
         Click(window, "StartButton");
+        Check(window.Session.Index == 0 && window.PreviewPanel.Visibility == Visibility.Collapsed &&
+            window.Heading.Text == window.Session.Steps[0].Exercise.Title, "Preview selection changed the starting exercise");
         for (var i = 0; i < 12; i++) app.Advance(TimeSpan.FromSeconds(1), now = now.AddSeconds(1), TimeSpan.Zero, false);
         Capture(window, "32-maintenance-guidance");
         var viewport = FindAncestor<ScrollViewer>(window.TimerLabel);
@@ -317,7 +352,11 @@ internal static class SmokeTest
         app.Advance(TimeSpan.FromSeconds(60), now = now.AddSeconds(60), TimeSpan.Zero, false);
         Check(window.Session.Paused && window.Session.ObservedPractice == before, "Long gap credited maintenance");
         Click(window, "PauseButton");
-        for (var i = 0; i < 118; i++) app.Advance(TimeSpan.FromSeconds(1), now = now.AddSeconds(1), TimeSpan.Zero, false);
+        for (var i = 0; i < 23; i++) app.Advance(TimeSpan.FromSeconds(1), now = now.AddSeconds(1), TimeSpan.Zero, false);
+        Check(window.Session.Side == 2 && window.Phase.Text.Contains("右侧") &&
+            System.Windows.Automation.AutomationProperties.GetName(window.Demonstration).Contains("右侧"), "Timer and illustration disagree on active side");
+        Capture(window, "38-maintenance-right-side");
+        for (var i = 0; i < 95; i++) app.Advance(TimeSpan.FromSeconds(1), now = now.AddSeconds(1), TimeSpan.Zero, false);
         Check(window.Session.FullyPracticed && !window.Topmost && window.WindowStyle == WindowStyle.SingleBorderWindow,
             "Completion did not release fullscreen before confirmation");
         Check(app.State.Days.Sum(d => d.MaintenanceSeconds.Values.Sum()) == 0, "Playback granted maintenance credit");
@@ -329,6 +368,26 @@ internal static class SmokeTest
         window = Application.Current.Windows.OfType<MaintenanceWindow>().Single(); windows.Add(window);
         var blocked = window.Session.Current.Exercise.Id;
         Check(window.HasStarted && window.DiscomfortButton.IsVisible && window.PauseButton.Visibility == Visibility.Collapsed, "Strict maintenance safety controls missing");
+        app.Advance(TimeSpan.FromSeconds(10), now = now.AddSeconds(10), TimeSpan.Zero, false);
+        before = window.Session.ObservedPractice;
+        Capture(window, "40-maintenance-alternating-legs");
+        Click(window, "ExitButton");
+        var exitRemaining = window.Session.TotalRemaining;
+        app.Advance(TimeSpan.FromSeconds(10), now = now.AddSeconds(10), TimeSpan.Zero, false);
+        Click(window, "ExitButton"); Click(window, "PauseButton"); Click(window, "ReplaceButton");
+        Check(window.Session.Paused && window.Session.ObservedPractice == before &&
+            window.Session.TotalRemaining == exitRemaining && window.Session.Current.Exercise.Id == blocked,
+            "Maintenance exit prompt counted time or accepted background controls");
+        Capture(window, "39-maintenance-exit-paused");
+        Click(window, "ContinueButton");
+        Check(!window.Session.Paused, "Canceling maintenance exit did not restore running state");
+        window.PauseForInterruption(); Click(window, "ExitButton"); Click(window, "ContinueButton");
+        Check(window.Session.Paused, "Canceling maintenance exit resumed a prior interruption");
+        Click(window, "PauseButton"); Click(window, "ExitButton");
+        app.Advance(TimeSpan.FromSeconds(60), now = now.AddSeconds(60), TimeSpan.Zero, false);
+        Click(window, "ContinueButton");
+        Check(window.Session.Paused && window.Session.ObservedPractice == before, "Exit cancellation resumed after a long time gap");
+        Click(window, "ExitButton");
         Click(window, "DiscomfortButton");
         Check(!window.IsVisible && app.State.Preferences.MaintenanceBlockedExercises.Contains(blocked), "Discomfort failed to exit and block action");
         Check(app.MaintenancePlan(true).All(s => s.Exercise.Id != blocked), "Blocked action returned in plan");
@@ -352,6 +411,7 @@ internal static class SmokeTest
         File.Delete(blockedPath); Check(failure.Save(), "Maintenance save did not recover");
         using var recovered = new AppController(blockedPath);
         Check(recovered.State.Days.Sum(d => d.MaintenanceSeconds.Values.Sum()) == 120, "Retry duplicated or lost maintenance credit");
+        Motion.SystemAnimationOverride = null; Motion.Configure(true);
     }
 
 }

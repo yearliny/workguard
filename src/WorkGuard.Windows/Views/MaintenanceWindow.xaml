@@ -7,18 +7,20 @@
     </DockPanel>
     <Border x:Name="EmergencyPanel" DockPanel.Dock="Top" Visibility="Collapsed" Background="#FFF4E7" CornerRadius="14" Padding="12">
       <StackPanel><TextBlock Text="需要回到工作？未确认的跟练不会记入今日。"/>
-        <WrapPanel><Button x:Name="ConfirmExitButton" Content="确认退出" Click="ConfirmExit_Click"/><Button Content="继续休息" Click="Continue_Click"/></WrapPanel>
+        <WrapPanel><Button x:Name="ConfirmExitButton" Content="确认退出" Click="ConfirmExit_Click"/><Button x:Name="ContinueButton" Content="继续休息" Click="Continue_Click"/></WrapPanel>
       </StackPanel>
     </Border>
     <StackPanel DockPanel.Dock="Bottom">
       <TextBlock x:Name="StatusNote" Text="动作以舒适为准 · 疼痛、麻木或头晕时，请停止" TextAlignment="Center" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,8" AutomationProperties.LiveSetting="Polite"/>
       <WrapPanel x:Name="Controls" HorizontalAlignment="Center">
-        <Button x:Name="StartButton" Content="开始维护" Style="{StaticResource RestPrimaryButton}" Click="Start_Click"/>
+        <Button x:Name="StartButton" Content="从第一个动作开始" Style="{StaticResource RestPrimaryButton}" Click="Start_Click"/>
+        <Button x:Name="PreviewMotionButton" Content="播放示意" Click="PreviewMotion_Click"/>
+        <Button x:Name="PreviewSideButton" Content="看看右侧" Click="PreviewSide_Click"/>
         <Button x:Name="PauseButton" Content="暂停" Click="Pause_Click" Visibility="Collapsed"/>
         <Button x:Name="ReplaceButton" Content="换个动作" Click="Replace_Click" Visibility="Collapsed"/>
         <Button x:Name="SkipButton" Content="略过这个动作" Style="{StaticResource RestTextButton}" Click="Skip_Click" Visibility="Collapsed"/>
         <Button x:Name="DiscomfortButton" Content="不适，立即停止" Style="{StaticResource RestTextButton}" Click="Discomfort_Click" Visibility="Collapsed"/>
-        <Button x:Name="VoiceButton" Content="语音开启" Style="{StaticResource RestTextButton}" Click="Voice_Click"/>
+        <Button x:Name="VoiceButton" Content="语音开启" Style="{StaticResource RestTextButton}" Click="Voice_Click" Visibility="Collapsed"/>
       </WrapPanel>
       <StackPanel x:Name="Journey" Margin="12,20,12,6">
         <DockPanel Margin="0,0,0,8"><TextBlock x:Name="TotalTime" DockPanel.Dock="Right" FontWeight="SemiBold"/><TextBlock x:Name="StepCount" FontSize="13"/></DockPanel>
@@ -28,6 +30,10 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
       <StackPanel MaxWidth="1000" VerticalAlignment="Center" Margin="0,12">
         <StackPanel x:Name="PracticePanel">
+          <DockPanel x:Name="PreviewPanel" MaxWidth="580" Margin="0,0,0,20">
+            <TextBlock Text="这次的动作" VerticalAlignment="Center" Margin="0,0,16,0"/>
+            <ComboBox x:Name="PreviewSelector" DisplayMemberPath="Label" SelectedValuePath="Index" SelectionChanged="Preview_Changed" AutomationProperties.Name="预览本次动作"/>
+          </DockPanel>
           <TextBlock x:Name="Phase" Text="给身体几分钟，慢慢活动一下" TextAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,10"/>
           <TextBlock x:Name="Heading" Text="让身体，保留活动的空间" TextAlignment="Center" FontSize="34" FontWeight="SemiBold"/>
           <TextBlock x:Name="Cue" TextAlignment="Center" MaxWidth="680" FontSize="17" LineHeight="28" Margin="0,16,0,0"/>

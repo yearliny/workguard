@@ -10,6 +10,7 @@ public partial class BreakWindow : Window
     private readonly bool _strict;
     private readonly List<RestCoverWindow> _covers = [];
     private bool _allowClose;
+    private bool _resumeAfterExit;
     private RestScene? _lastScene;
     public bool IsStrict => _strict;
     private int _lastIndex;
@@ -120,26 +121,39 @@ public partial class BreakWindow : Window
     public void PauseForInterruption()
     {
         if (!_started || _session.Finished) return;
+        _resumeAfterExit = false;
         _session.Paused = true;
         Render();
     }
     private void Pause_Click(object sender, RoutedEventArgs e)
-    { if (!_strict || _session.Paused) { _session.Paused = !_session.Paused; Render(); } }
+    { if (EmergencyPanel.Visibility != Visibility.Visible && (!_strict || _session.Paused)) { _session.Paused = !_session.Paused; Render(); } }
     private void Skip_Click(object sender, RoutedEventArgs e) { _session.Skip(); Render(); }
     private void Exit_Click(object sender, RoutedEventArgs e) => RequestExit();
     public void CloseForSystem() { _allowClose = true; Close(); }
     private void RequestExit()
     {
         if (!_strict || _session.Finished) { Close(); return; }
+        if (EmergencyPanel.Visibility == Visibility.Visible) { ContinueButton.Focus(); return; }
+        _resumeAfterExit = !_session.Paused;
+        _session.Paused = true;
         EmergencyPanel.Visibility = Visibility.Visible;
+        PauseButton.IsEnabled = AlternativeButton.IsEnabled = false;
+        Render();
         Motion.Reveal(EmergencyPanel);
         Activate(); ContinueButton.Focus();
     }
     private void ConfirmExit_Click(object sender, RoutedEventArgs e) => CloseForSystem();
     private void Continue_Click(object sender, RoutedEventArgs e)
-    { EmergencyPanel.Visibility = Visibility.Collapsed; ExitButton.Focus(); }
+    {
+        if (EmergencyPanel.Visibility != Visibility.Visible) return;
+        EmergencyPanel.Visibility = Visibility.Collapsed;
+        _session.Paused = !_resumeAfterExit; _resumeAfterExit = false;
+        PauseButton.IsEnabled = AlternativeButton.IsEnabled = true;
+        Render();
+        if (_session.Paused) PauseButton.Focus(); else ExitButton.Focus();
+    }
     private void Alternative_Click(object sender, RoutedEventArgs e)
-    { _session.UseRestAlternative(); AlternativeButton.Visibility = Visibility.Collapsed; Render(); }
+    { if (EmergencyPanel.Visibility != Visibility.Visible) { _session.UseRestAlternative(); AlternativeButton.Visibility = Visibility.Collapsed; Render(); } }
     private void Window_KeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Escape) { RequestExit(); e.Handled = true; }
