@@ -45,6 +45,7 @@ internal sealed class AppController : IDisposable
     private TimeSpan _completionUntil;
     public string? LastCompletion => _clock.Elapsed < _completionUntil ? _lastCompletion : null;
     private BreakWindow? _break;
+    private MaintenanceWindow? _maintenance;
     private ReminderWindow? _reminder;
     private int _eyeVariant, _bodyVariant;
 
@@ -93,7 +94,7 @@ internal sealed class AppController : IDisposable
         var away = p.InferNaturalRest && !MeetingMode && !quietFullscreen && idle >= TimeSpan.FromMinutes(1);
         if (quietFullscreen || quietHours || outside || Paused || unavailable || MeetingMode || away) DismissReminder();
         var reason = !p.OnboardingComplete ? DeliveryReason.Setup : unavailable ? DeliveryReason.Unavailable :
-            _break is not null ? DeliveryReason.Resting : _welcome is not null || _settings is not null ? DeliveryReason.Settings :
+            (_break is not null || _maintenance is not null) ? DeliveryReason.Resting : _welcome is not null || _settings is not null ? DeliveryReason.Settings :
             MeetingMode ? DeliveryReason.Meeting : Paused ? DeliveryReason.Paused : outside ? DeliveryReason.OutsideSchedule :
             quietHours ? DeliveryReason.QuietHours : quietFullscreen ? DeliveryReason.Fullscreen : away ? DeliveryReason.Idle :
             _reminder is not null ? DeliveryReason.ReminderOpen : DeliveryReason.Ready;
@@ -102,6 +103,13 @@ internal sealed class AppController : IDisposable
         {
             Engine.Advance(elapsed, new(TimeSpan.Zero, Unavailable: true));
             _break?.PauseForInterruption();
+            _maintenance?.PauseForInterruption();
+        }
+        else if (_maintenance is not null)
+        {
+            if (_maintenance.HasStarted) _maintenance.Tick(elapsed, localNow);
+            else Engine.Advance(elapsed, new(idle ?? TimeSpan.Zero, Quiet: true,
+                KeepCountingWithoutInput: MeetingMode || quietFullscreen || idle is null));
         }
         else if (_break is { IsFinished: true })
         {
@@ -151,7 +159,20 @@ internal sealed class AppController : IDisposable
     private void ShowReminder(BreakKind kind)
     {
         if (_reminder is not null) return;
+        var plan = kind == BreakKind.Movement && State.Preferences.MaintenanceEnabled ? MaintenancePlan(false) : [];
         var reminder = new ReminderWindow(kind);
+        if (plan.Count > 0)
+        {
+            reminder.Heading.Text = "给身体，留一点活动空间";
+            reminder.Description.Text = $"这次从{MaintenanceCatalog.Label(plan[0].Exercise.Area)}开始，约 {TimeSpan.FromSeconds(plan.Sum(x => x.TotalSeconds)):mm\\:ss}，含准备。";
+            reminder.StartButton.Content = "开始短维护";
+        }
+        if (plan.Count == 0 && State.Preferences.UseFreeRest(kind))
+        {
+            reminder.Heading.Text = "给自己一段自由休息";
+            reminder.Description.Text = "按自己的情况选择舒适的休息方式，这次不安排指定动作。";
+            reminder.StartButton.Content = kind == BreakKind.Office ? "休息 7 分钟" : "休息 3 分钟";
+        }
         _reminder = reminder;
         reminder.Closed += (_, _) =>
         {
@@ -167,9 +188,12 @@ internal sealed class AppController : IDisposable
     public void StartBreak(BreakKind kind, bool automatic = false, bool beginImmediately = false, bool strict = false)
     {
         if (_locked || _sleeping) return;
+        if (_maintenance is not null) { if (!automatic) _maintenance.Activate(); return; }
+        if (kind == BreakKind.Movement && State.Preferences.MaintenanceEnabled && MaintenancePlan(false).Count > 0)
+        { StartMaintenance(false, beginImmediately || strict, strict); return; }
         DismissReminder();
         if (_break is not null) { if (!automatic) _break.Activate(); return; }
-        _break = new BreakWindow(kind, State.Preferences.GentleOnly, automatic, Engine.Continuous, State.Preferences.SoundEnabled, strict, kind == BreakKind.Eyes ? _eyeVariant++ : _bodyVariant++, State.Preferences.NeckMovements);
+        _break = new BreakWindow(kind, State.Preferences.GentleOnly, automatic, Engine.Continuous, State.Preferences.SoundEnabled, strict, kind == BreakKind.Eyes ? _eyeVariant++ : _bodyVariant++, State.Preferences.NeckMovements && (State.Preferences.MaintenanceExcludedAreas & BodyArea.Neck) == 0, freeRest: State.Preferences.UseFreeRest(kind), standing: State.Preferences.MaintenanceStanding);
         _break.Completed += session =>
         {
             if (session.FullyCompleted && Engine.Complete(session.RestOnly ? BreakKind.Eyes : session.Kind, session.Observed))
@@ -195,6 +219,72 @@ internal sealed class AppController : IDisposable
         _lastTick = _clock.Elapsed;
         window.Show();
         if (beginImmediately) window.BeginSession();
+    }
+
+    internal IReadOnlyList<MaintenanceStep> MaintenancePlan(bool concentrated) => MaintenancePlanner.Build(State.Preferences,
+        State.Days.FirstOrDefault(d => d.Date == DateOnly.FromDateTime(_localNow))?.MaintenanceSeconds ?? [], concentrated);
+
+    public void StartMaintenance(bool concentrated, bool beginImmediately = false, bool strict = false)
+    {
+        if (_locked || _sleeping) return;
+        if (_maintenance is not null) { _maintenance.Activate(); return; }
+        if (_break is not null) { _break.Activate(); return; }
+        if (_settings is not null) { _settings.Activate(); return; }
+        if (_welcome is not null) { _welcome.Activate(); return; }
+        var plan = MaintenancePlan(concentrated);
+        if (plan.Count == 0) { ShowMaintenance(); return; }
+        DismissReminder();
+        var window = new MaintenanceWindow(plan, strict, State.Preferences.MaintenanceVoice,
+            current =>
+            {
+                var allowed = MaintenanceCatalog.Allowed(State.Preferences).Where(e => e.Id != current.Id).ToArray();
+                return allowed.FirstOrDefault(e => e.Area == current.Area) ?? allowed.FirstOrDefault();
+            }, BlockMaintenanceExercise);
+        _maintenance = window;
+        var exposureReset = false;
+        window.Confirmed += (session, credits) =>
+        {
+            foreach (var credit in credits)
+            {
+                var day = LocalStore.Day(State, credit.Date);
+                day.MaintenanceSeconds[credit.Area] = day.MaintenanceSeconds.GetValueOrDefault(credit.Area) + credit.Seconds;
+            }
+            var confirmedSeconds = credits.Sum(c => c.Seconds);
+            var followedAll = session.FullyPracticed && Math.Abs(confirmedSeconds - session.ObservedPractice) < .001;
+            exposureReset = Engine.CompleteMaintenance(followedAll, TimeSpan.FromSeconds(confirmedSeconds));
+            _completionUntil = _clock.Elapsed + TimeSpan.FromMinutes(2);
+            _lastCompletion = confirmedSeconds > 0 ? $"已确认跟练 {TimeSpan.FromSeconds(confirmedSeconds):mm\\:ss}，下次继续。" : "这次未记录跟练，下次再来。";
+            Save(); Changed?.Invoke();
+        };
+        window.Ended += () =>
+        {
+            if (!exposureReset) Engine.Snooze(TimeSpan.FromMinutes(5));
+            _maintenance = null; _lastTick = _clock.Elapsed; Changed?.Invoke();
+        };
+        _lastTick = _clock.Elapsed;
+        window.Show();
+        if (beginImmediately) window.BeginSession();
+    }
+
+    private void BlockMaintenanceExercise(string id)
+    {
+        // Keep the exclusion in memory even on save failure; the regular retry persists it later.
+        State.Preferences = State.Preferences with
+        { MaintenanceBlockedExercises = State.Preferences.MaintenanceBlockedExercises.Append(id).Distinct().ToArray() };
+        _completionUntil = _clock.Elapsed + TimeSpan.FromMinutes(2);
+        _lastCompletion = "已停止，这个动作暂停推荐；可在身体维护偏好中恢复。";
+        Save(); Changed?.Invoke();
+    }
+
+    public void ShowMaintenance()
+    {
+        ShowDashboard();
+        if (_dashboard is not null) _dashboard.Sections.SelectedItem = _dashboard.MaintenanceTab;
+    }
+    public void ShowMaintenanceSettings()
+    {
+        ShowSettings();
+        if (_settings is not null) _settings.Sections.SelectedItem = _settings.MaintenanceTab;
     }
 
     public void ShowDashboard()
@@ -242,6 +332,7 @@ internal sealed class AppController : IDisposable
             if (next.StartWithWindows || previousStartup is not null)
             { WindowsActivity.SetStartup(next.StartWithWindows); startupChanged = true; }
             _store.Save(new StoredState { Preferences = next, Days = State.Days, LastOfficeReminderDate = State.LastOfficeReminderDate });
+            _maintenance?.CloseForSystem();
             State.Preferences = next;
             Motion.Configure(next.ReduceMotion);
             Engine.Configure(next);
@@ -266,6 +357,7 @@ internal sealed class AppController : IDisposable
         if (MessageBox.Show("将恢复上一次成功保存的数据。当前文件会另外保留，恢复的设置需要重新确认。", "恢复本地备份", MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;
         try
         {
+            _maintenance?.CloseForSystem();
             State = _store.RestoreBackup();
             Motion.Configure(State.Preferences.ReduceMotion);
             Engine.Configure(State.Preferences);
@@ -288,7 +380,7 @@ internal sealed class AppController : IDisposable
         { Diagnostics.Record(error); MessageBox.Show("无法导出，请选择可写入的位置。", "工作防沉迷"); }
     }
 
-    public void EndBreakForSystem() => _break?.CloseForSystem();
+    public void EndBreakForSystem() { _break?.CloseForSystem(); _maintenance?.CloseForSystem(); }
 
     public void TogglePause() { _pauseUntil = Paused ? TimeSpan.Zero : _clock.Elapsed + TimeSpan.FromHours(1); if (Paused) DismissReminder(); Changed?.Invoke(); }
 
@@ -316,6 +408,7 @@ internal sealed class AppController : IDisposable
             DismissReminder();
             if (_break is { HasStarted: false }) _break.Close();
             else _break?.PauseForInterruption();
+            _maintenance?.PauseForInterruption();
         }
         else if (_unavailableSince is { } since)
         {
@@ -325,7 +418,7 @@ internal sealed class AppController : IDisposable
         _lastTick = _clock.Elapsed;
     }
 
-    private void DisplayChanged(object? sender, EventArgs e) => OnUi(() => { DismissReminder(); _break?.CloseForSystem(); });
+    private void DisplayChanged(object? sender, EventArgs e) => OnUi(() => { DismissReminder(); _break?.CloseForSystem(); _maintenance?.CloseForSystem(); });
     private void OnUi(Action action) { if (!_disposed) Application.Current.Dispatcher.BeginInvoke(new Action(() => { if (!_disposed) action(); })); }
 
     public bool Save()
@@ -353,6 +446,7 @@ internal sealed class AppController : IDisposable
         if (_disposed) return;
         _disposed = true;
         _timer.Stop();
+        _maintenance?.CloseForSystem();
         DismissReminder();
         SystemEvents.SessionSwitch -= SessionSwitch;
         SystemEvents.PowerModeChanged -= PowerChanged;

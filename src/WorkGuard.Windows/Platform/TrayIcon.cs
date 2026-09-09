@@ -36,7 +36,8 @@ internal sealed class TrayIcon : IDisposable
         _menu.Items.Add(new Forms.ToolStripSeparator());
         _menu.Items.Add("打开今日概览", null, (_, _) => app.ShowDashboard());
         _menu.Items.Add("20 秒眼睛休息", null, (_, _) => app.StartBreak(BreakKind.Eyes));
-        _menu.Items.Add("3 分钟身体活动", null, (_, _) => app.StartBreak(BreakKind.Movement));
+        _menu.Items.Add("身体休息 / 短维护", null, (_, _) => app.StartBreak(BreakKind.Movement));
+        _menu.Items.Add("每日身体维护", null, (_, _) => app.ShowMaintenance());
         _menu.Items.Add("7 分钟办公室活动", null, (_, _) => app.StartBreak(BreakKind.Office));
         _menu.Items.Add(new Forms.ToolStripSeparator());
         _meeting.CheckedChanged += (_, _) => app.MeetingMode = _meeting.Checked;

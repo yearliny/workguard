@@ -11,6 +11,13 @@ public static class Programs
         BreakKind.Eyes => 20, BreakKind.Movement => 180, _ => 420
     });
 
+    // No named joint actions: exclusions must also apply after today's maintenance is complete.
+    public static IReadOnlyList<Exercise> FreeRest(BreakKind kind, bool standing) =>
+        [new("自由休息一会儿", standing
+            ? "能舒适行走时，可以在安全的地方慢走。也可以选择舒适、有支撑的姿势休息，不需要完成指定动作。"
+            : "选择舒适、有支撑的姿势休息，让目光离开屏幕。不要求站立，也不需要完成指定动作。",
+            (int)Duration(kind).TotalSeconds, "○", RestScene.Distance)];
+
     // General movement prompts, not treatment protocols or high-intensity training.
     public static IReadOnlyList<Exercise> For(BreakKind kind, bool gentle, int variant = 0, bool neck = false) => kind switch
     {

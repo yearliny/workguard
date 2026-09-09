@@ -16,7 +16,18 @@ public partial class SettingsWindow : Window
         NaturalRest.Text = p.NaturalRestMinutes.ToString();
         Strict.IsChecked = p.StrictMode;
         ForceEyes.IsChecked = p.StrictEyes;
-        Neck.IsChecked = p.NeckMovements;
+        Neck.IsChecked = p.NeckMovements && (p.MaintenanceExcludedAreas & BodyArea.Neck) == 0;
+        MaintenanceEnabled.IsChecked = p.MaintenanceEnabled;
+        MaintenanceGoal.Text = p.MaintenanceGoalMinutes.ToString();
+        MaintenanceStanding.IsChecked = p.MaintenanceStanding;
+        MaintenanceVoice.IsChecked = p.MaintenanceVoice;
+        foreach (var area in new[] { BodyArea.Thoracic, BodyArea.Shoulders, BodyArea.Hips, BodyArea.BackLegs, BodyArea.Ankles })
+            MaintenanceAreaChoices.Children.Add(new CheckBox { Tag = area, Content = MaintenanceCatalog.Label(area),
+                IsChecked = (p.MaintenanceExcludedAreas & area) == 0, Margin = new Thickness(0, 0, 16, 12) });
+        foreach (var id in p.MaintenanceBlockedExercises)
+            BlockedExercises.Children.Add(new CheckBox { Tag = id, IsChecked = true,
+                Content = MaintenanceCatalog.All.First(e => e.Id == id).Title, Margin = new Thickness(0, 5, 0, 5) });
+        BlockedHint.Text = p.MaintenanceBlockedExercises.Length == 0 ? "暂无暂停的动作。" : "勾选表示继续暂停。确认适合恢复后，取消对应勾选并保存。";
         EyeEnabled.IsChecked = p.EyeReminders;
         InferRest.IsChecked = p.InferNaturalRest;
         QuietFullscreen.IsChecked = p.QuietWhenFullscreen;
@@ -69,8 +80,21 @@ public partial class SettingsWindow : Window
             OfficeTime.Focus();
             return;
         }
+        if (!int.TryParse(MaintenanceGoal.Text, out var maintenanceGoal) || maintenanceGoal is < 5 or > 10)
+        {
+            Sections.SelectedItem = MaintenanceTab;
+            ValidationText.Text = "每日跟练目标请填写 5–10 之间的整数。";
+            MaintenanceGoal.Focus(); return;
+        }
+        var excluded = MaintenanceAreaChoices.Children.OfType<CheckBox>().Where(c => c.IsChecked != true)
+            .Aggregate(BodyArea.None, (areas, c) => areas | (BodyArea)c.Tag);
+        if (Neck.IsChecked != true) excluded |= BodyArea.Neck;
+        var blocked = BlockedExercises.Children.OfType<CheckBox>().Where(c => c.IsChecked == true).Select(c => (string)c.Tag).ToArray();
         var p = _app.State.Preferences with
         {
+            MaintenanceEnabled = MaintenanceEnabled.IsChecked == true, MaintenanceGoalMinutes = maintenanceGoal,
+            MaintenanceStanding = MaintenanceStanding.IsChecked == true, MaintenanceVoice = MaintenanceVoice.IsChecked == true,
+            MaintenanceExcludedAreas = excluded, MaintenanceBlockedExercises = blocked,
             StrictMode = Strict.IsChecked == true, StrictEyes = ForceEyes.IsChecked == true, NeckMovements = Neck.IsChecked == true,
             EyeIntervalMinutes = eye, MovementIntervalMinutes = movement, NaturalRestMinutes = rest,
             EyeReminders = EyeEnabled.IsChecked == true, InferNaturalRest = InferRest.IsChecked == true,

@@ -2,12 +2,21 @@ namespace WorkGuard.Core;
 
 public sealed record Preferences
 {
+    public bool MaintenanceEnabled { get; init; }
+    public int MaintenanceGoalMinutes { get; init; } = 8;
+    public bool MaintenanceStanding { get; init; } = true;
+    public bool MaintenanceVoice { get; init; } = true;
+    public BodyArea MaintenanceExcludedAreas { get; init; }
+    public string[] MaintenanceBlockedExercises { get; init; } = [];
     public int EyeIntervalMinutes { get; init; } = 20;
     public int MovementIntervalMinutes { get; init; } = 60;
     public int NaturalRestMinutes { get; init; } = 5;
     public bool StrictMode { get; init; }
     public bool StrictEyes { get; init; } = true;
     public bool NeckMovements { get; init; }
+    public bool UseFreeRest(BreakKind kind) => kind != BreakKind.Eyes &&
+        (kind == BreakKind.Movement && MaintenanceEnabled || (MaintenanceExcludedAreas & ~BodyArea.Neck) != BodyArea.None ||
+         MaintenanceBlockedExercises.Length > 0 || !MaintenanceStanding);
     public bool ShouldForce(BreakKind kind) => StrictMode &&
         (kind == BreakKind.Movement || kind == BreakKind.Eyes && StrictEyes && EyeReminders);
     public bool EyeReminders { get; init; } = true;
@@ -31,6 +40,9 @@ public sealed record Preferences
 
     public Preferences Validate() => this with
     {
+        MaintenanceGoalMinutes = Math.Clamp(MaintenanceGoalMinutes, 5, 10),
+        MaintenanceExcludedAreas = MaintenanceExcludedAreas & BodyArea.All,
+        MaintenanceBlockedExercises = (MaintenanceBlockedExercises ?? []).Where(id => MaintenanceCatalog.All.Any(e => e.Id == id)).Distinct().ToArray(),
         EyeIntervalMinutes = Math.Clamp(EyeIntervalMinutes, 10, 60),
         MovementIntervalMinutes = Math.Clamp(MovementIntervalMinutes, 30, 120),
         NaturalRestMinutes = Math.Clamp(NaturalRestMinutes, 3, 15),

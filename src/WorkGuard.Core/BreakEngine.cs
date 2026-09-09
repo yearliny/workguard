@@ -87,6 +87,15 @@ public sealed class BreakEngine(Preferences preferences)
         return true;
     }
 
+    // A user-confirmed, fully followed maintenance flow can reset exposure only after
+    // two observed minutes of practice. Short/partial flows never grant this credit.
+    public bool CompleteMaintenance(bool fullyPracticed, TimeSpan practice)
+    {
+        if (!fullyPracticed || practice < TimeSpan.FromMinutes(2)) return false;
+        ResetExposure();
+        return true;
+    }
+
     private void ResetExposure()
     {
         Continuous = TimeSpan.Zero;

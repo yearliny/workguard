@@ -28,7 +28,7 @@
                   <TextBlock x:Name="GreetingText" Text="认真工作，也认真休息。" FontSize="25" FontWeight="SemiBold" Margin="0,0,0,12"/>
                   <Border Background="#F4F6F0" CornerRadius="12" Padding="10,5" HorizontalAlignment="Left"><TextBlock x:Name="StatusText" Foreground="{StaticResource MutedBrush}" FontSize="12"/></Border>
                   <TextBlock x:Name="NextText" FontSize="15" Margin="0,16,0,12"/>
-                  <Button Content="现在活动 3 分钟" Style="{StaticResource PrimaryButton}" ui:Visuals.Glyph="&#xE768;" Click="Movement_Click" HorizontalAlignment="Left"/>
+                  <Button x:Name="MovementAction" Content="现在活动 3 分钟" Style="{StaticResource PrimaryButton}" ui:Visuals.Glyph="&#xE768;" Click="Movement_Click" HorizontalAlignment="Left"/>
                   <TextBlock x:Name="TimingHint" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,8,0,0"/>
                 </StackPanel>
                 <Grid Grid.Column="1" Width="184" Height="184" VerticalAlignment="Center">
@@ -66,8 +66,8 @@
               <Button x:Name="EyesAction" Style="{StaticResource ActivityCard}" Click="Eyes_Click" AutomationProperties.Name="远眺 20 秒" Margin="0,0,12,0">
                 <StackPanel Orientation="Horizontal"><Border Style="{StaticResource IconBadge}" Background="#E9EEF5" Margin="0,0,14,0"><ui:Symbol Text="&#xE890;" Foreground="#537481"/></Border><StackPanel><TextBlock Text="让目光走远一点" FontWeight="SemiBold" LineHeight="22"/><TextBlock Text="远眺 20 秒" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"/></StackPanel></StackPanel>
               </Button>
-              <Button x:Name="OfficeAction" Style="{StaticResource ActivityCard}" Click="Office_Click" AutomationProperties.Name="办公室活动 7 分钟" Margin="0">
-                <StackPanel Orientation="Horizontal"><Border Style="{StaticResource IconBadge}" Background="#F6E7D9" Margin="0,0,14,0"><ui:Symbol Text="&#xE916;" Foreground="#A57348"/></Border><StackPanel><TextBlock Text="给身体充个电" FontWeight="SemiBold" LineHeight="22"/><TextBlock Text="办公室活动 7 分钟" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"/></StackPanel></StackPanel>
+              <Button x:Name="OfficeAction" Style="{StaticResource ActivityCard}" Click="Maintenance_Click" AutomationProperties.Name="每日身体维护" Margin="0">
+                <StackPanel Orientation="Horizontal"><Border Style="{StaticResource IconBadge}" Background="#F6E7D9" Margin="0,0,14,0"><ui:Symbol Text="&#xE916;" Foreground="#A57348"/></Border><StackPanel><TextBlock Text="每日身体维护" FontWeight="SemiBold" LineHeight="22"/><TextBlock x:Name="MaintenanceQuickSummary" Text="每天几分钟，保留活动空间" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"/></StackPanel></StackPanel>
               </Button>
             </UniformGrid>
           </StackPanel>
@@ -102,6 +102,7 @@
               <DataGridTextColumn Header="电脑活动" Binding="{Binding Active}" Width="*"/>
               <DataGridTextColumn Header="最长连续" Binding="{Binding Longest}" Width="*"/>
               <DataGridTextColumn Header="身体 / 眼睛休息" Binding="{Binding Breaks}" Width="1.3*"/>
+              <DataGridTextColumn Header="确认跟练" Binding="{Binding Maintenance}" Width="*"/>
             </DataGrid.Columns>
           </DataGrid>
           <TextBlock Grid.Row="3" Text="仅保存最近 90 天。休息次数表示计时流程完成，不代表验证了身体动作。" Foreground="{StaticResource MutedBrush}" Margin="0,16,0,0"/>
@@ -139,6 +140,30 @@
               </DockPanel>
             </Border>
             <TextBlock Text="工作时段、会议和暂停只影响提醒。自然离席仍是估计，活动计数仅表示完成了计时流程。" Foreground="{StaticResource MutedBrush}" FontSize="12"/>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+      <TabItem x:Name="MaintenanceTab" Header="身体维护" ui:Visuals.Glyph="&#xE916;">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Margin="0,20,12,0">
+            <DockPanel Margin="0,0,0,20"><Button DockPanel.Dock="Right" Content="维护偏好" Click="MaintenanceSettings_Click" Background="Transparent"/>
+              <StackPanel><TextBlock Text="每天一点，活动自如。" FontSize="28" FontWeight="SemiBold"/><TextBlock Text="不用追求幅度，给关节一点活动的机会。" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0"/></StackPanel>
+            </DockPanel>
+            <Border Background="#E8EDE3" CornerRadius="22" Padding="24" Margin="0,0,0,18">
+              <StackPanel>
+                <TextBlock x:Name="MaintenanceProgressText" FontSize="24" FontWeight="SemiBold"/>
+                <ProgressBar x:Name="MaintenanceProgress" Maximum="100" Height="5" Margin="0,18" BorderThickness="0" Foreground="{StaticResource AccentBrush}" Background="#CEDBCC" AutomationProperties.Name="今日已确认跟练进度"/>
+                <TextBlock x:Name="MaintenanceNext" Margin="0,0,0,12"/>
+                <WrapPanel><Button x:Name="ShortMaintenanceButton" Content="来一段短维护" Click="ShortMaintenance_Click" Style="{StaticResource PrimaryButton}"/><Button x:Name="FullMaintenanceButton" Content="完成今日剩余" Click="FullMaintenance_Click"/></WrapPanel>
+                <TextBlock x:Name="MaintenanceScheduleNote" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,12,0,0"/>
+              </StackPanel>
+            </Border>
+            <TextBlock Text="今天活动过哪些部位" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12"/>
+            <ItemsControl x:Name="MaintenanceAreas"><ItemsControl.ItemTemplate><DataTemplate>
+              <DockPanel Margin="0,7"><TextBlock Text="{Binding Status}" DockPanel.Dock="Right" Foreground="{StaticResource MutedBrush}"/><TextBlock Text="{Binding Name}"/></DockPanel>
+            </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+            <TextBlock Text="以上来自你的跟练确认，不是关节活动度测量；准备和暂停不计入跟练。" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,16,0,20"/>
+            <DockPanel><Button DockPanel.Dock="Right" Content="开始 7 分钟活动" Click="Office_Click"/><StackPanel><TextBlock Text="想多活动一会儿？" FontWeight="SemiBold"/><TextBlock Text="办公室活动仍可单独开始，不重复累计维护时间。" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,6,0,0"/></StackPanel></DockPanel>
           </StackPanel>
         </ScrollViewer>
       </TabItem>

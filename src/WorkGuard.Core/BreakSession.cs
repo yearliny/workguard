@@ -1,9 +1,9 @@
 namespace WorkGuard.Core;
 
-public sealed class BreakSession(BreakKind kind, bool gentle, bool strict = false, int variant = 0, bool neck = false)
+public sealed class BreakSession(BreakKind kind, bool gentle, bool strict = false, int variant = 0, bool neck = false, bool freeRest = false, bool standing = true)
 {
     public BreakKind Kind { get; } = kind;
-    public IReadOnlyList<Exercise> Exercises { get; } = Programs.For(kind, gentle, variant, neck);
+    public IReadOnlyList<Exercise> Exercises { get; } = freeRest && kind != BreakKind.Eyes ? Programs.FreeRest(kind, standing) : Programs.For(kind, gentle, variant, neck);
     public bool Strict { get; } = strict;
     public bool RestOnly { get; private set; }
     public bool ActivityCompleted => FullyCompleted && !RestOnly;
