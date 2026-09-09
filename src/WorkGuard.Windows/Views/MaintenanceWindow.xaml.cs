@@ -26,8 +26,8 @@ public partial class MaintenanceWindow : Window
         Countdown.Text = Clock(Session.TotalSeconds);
         TotalTime.Text = "预计 " + Clock(Session.TotalSeconds) + " · 含准备";
         StepCount.Text = plan.Count + " 个动作 · 按自己的节奏来";
-        PreviewSelector.ItemsSource = plan.Select((step, index) => new
-        { Index = index, Label = $"{index + 1}. {step.Exercise.Title} · {Clock(step.Seconds)}" }).ToArray();
+        PreviewSelector.ItemsSource = plan.Select((step, index) =>
+            $"{index + 1}. {step.Exercise.Title} · {Clock(step.Seconds)}").ToArray();
         PreviewSelector.SelectedIndex = 0;
         VoiceButton.Content = voice ? "语音开启" : "语音关闭";
         Loaded += (_, _) => { if (_strict) BeginSession(); };

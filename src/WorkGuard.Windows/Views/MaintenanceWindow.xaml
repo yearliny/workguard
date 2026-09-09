@@ -63,7 +63,7 @@
         <StackPanel x:Name="PracticePanel">
           <DockPanel x:Name="PreviewPanel" MaxWidth="580" Margin="0,0,0,12">
             <TextBlock Text="这次的动作" VerticalAlignment="Center" Margin="0,0,16,0"/>
-            <ComboBox x:Name="PreviewSelector" Style="{StaticResource PreviewPicker}" DisplayMemberPath="Label" SelectedValuePath="Index" SelectionChanged="Preview_Changed" AutomationProperties.Name="预览本次动作"/>
+            <ComboBox x:Name="PreviewSelector" Style="{StaticResource PreviewPicker}" SelectionChanged="Preview_Changed" AutomationProperties.Name="预览本次动作"/>
           </DockPanel>
           <TextBlock x:Name="Phase" Text="给身体几分钟，慢慢活动一下" TextAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,10"/>
           <TextBlock x:Name="Heading" Text="让身体，保留活动的空间" TextAlignment="Center" FontSize="34" FontWeight="SemiBold"/>
