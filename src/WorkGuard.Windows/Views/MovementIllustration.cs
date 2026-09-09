@@ -10,23 +10,28 @@ public sealed class MovementIllustration : FrameworkElement
     private readonly Stopwatch _clock = new();
     private MaintenanceExercise? _exercise;
     private bool _playing;
+    private int _side = 1;
+    internal bool IsAnimating => _timer.IsEnabled;
     public MovementIllustration()
     {
         _timer.Tick += (_, _) => { if (!Motion.Enabled) { Stop(); } InvalidateVisual(); };
         Unloaded += (_, _) => Stop();
         Loaded += (_, _) => UpdateTimer();
+        IsVisibleChanged += (_, _) => UpdateTimer();
         IsHitTestVisible = false;
     }
-    public void Set(MaintenanceExercise exercise, bool playing)
+    public void Set(MaintenanceExercise exercise, bool playing, int side = 1)
     {
-        if (_exercise?.Id != exercise.Id) _clock.Reset();
-        _exercise = exercise; _playing = playing;
-        System.Windows.Automation.AutomationProperties.SetName(this, exercise.Title + "动作示意。" + exercise.Setup + exercise.Cue);
+        side = side == 2 ? 2 : 1;
+        if (_exercise?.Id != exercise.Id || _side != side) _clock.Reset();
+        _exercise = exercise; _playing = playing; _side = side;
+        System.Windows.Automation.AutomationProperties.SetName(this, exercise.Title + "动作示意。" +
+            (exercise.Bilateral ? (side == 1 ? "左侧。" : "右侧。") : "") + exercise.Setup + exercise.Cue);
         UpdateTimer(); InvalidateVisual();
     }
     private void UpdateTimer()
     {
-        if (IsLoaded && _playing && Motion.Enabled) { _clock.Start(); _timer.Start(); }
+        if (IsLoaded && IsVisible && _playing && Motion.Enabled) { _clock.Start(); _timer.Start(); }
         else Stop();
     }
     private void Stop() { _timer.Stop(); _clock.Stop(); }
@@ -36,15 +41,22 @@ public sealed class MovementIllustration : FrameworkElement
     {
         base.OnRender(dc);
         if (_exercise is null || ActualWidth <= 0 || ActualHeight <= 0) return;
-        var scale = Math.Min(ActualWidth / 520, ActualHeight / 340);
-        dc.PushTransform(new TranslateTransform((ActualWidth - 520 * scale) / 2, (ActualHeight - 340 * scale) / 2));
+        var scale = Math.Min(ActualWidth / 520, Math.Max(1, ActualHeight - 24) / 290);
+        var offsetX = (ActualWidth - 520 * scale) / 2;
+        dc.PushTransform(new TranslateTransform(offsetX, (ActualHeight - 24 - 290 * scale) / 2));
         dc.PushTransform(new ScaleTransform(scale, scale));
-        var phase = Motion.Enabled ? (1 - Math.Cos(_clock.Elapsed.TotalSeconds * Math.PI / 3)) / 2 : 1;
-        Figure(dc, 130, 0, .42);
-        Figure(dc, 380, phase, 1);
-        Label(dc, "起始姿势", 130, 310);
-        Label(dc, Motion.Enabled ? "缓慢活动，再回正" : "活动位置 · 再回正", 380, 310);
+        // A static preview needs distinct positions even before the animation has ever run.
+        var animatedFrame = Motion.Enabled && _clock.Elapsed > TimeSpan.Zero;
+        var phase = animatedFrame ? (1 - Math.Cos(_clock.Elapsed.TotalSeconds * Math.PI / 3)) / 2 : 1;
+        var march = _exercise.Demo == MovementDemo.March;
+        var side = march && animatedFrame ? ((int)(_clock.Elapsed.TotalSeconds / 6) % 2) + 1 : _side;
+        Figure(dc, 130, march && !animatedFrame ? 1 : 0, .42, march && !animatedFrame ? 1 : side);
+        Figure(dc, 380, phase, 1, march && !animatedFrame ? 2 : side);
         dc.Pop(); dc.Pop();
+        // Keep captions readable when the figure shrinks for a compact window.
+        Label(dc, march && !animatedFrame ? "一侧抬起" : "起始姿势", offsetX + 130 * scale, ActualHeight - 20);
+        Label(dc, march ? (animatedFrame ? "放下后，两侧交替" : "放下后，换另一侧") :
+            _exercise.Bilateral ? (_side == 1 ? "左侧 · 再回正" : "右侧 · 再回正") : "活动位置 · 再回正", offsetX + 380 * scale, ActualHeight - 20);
     }
     private static void Label(DrawingContext dc, string value, double x, double y)
     {
@@ -57,15 +69,17 @@ public sealed class MovementIllustration : FrameworkElement
         var pen = new Pen(SystemParameters.HighContrast ? SystemColors.WindowTextBrush : color, width) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round, LineJoin = PenLineJoin.Round };
         for (var i = 1; i < points.Length; i++) dc.DrawLine(pen, points[i - 1], points[i]);
     }
-    private void Figure(DrawingContext dc, double center, double t, double opacity)
+    private void Figure(DrawingContext dc, double center, double t, double opacity, int side)
     {
         dc.PushOpacity(opacity);
         dc.PushTransform(new TranslateTransform(center, 0));
+        // Mirror only the body drawing; labels retain their normal reading direction.
+        dc.PushTransform(new ScaleTransform(side == 2 ? -1 : 1, 1));
         var demo = _exercise!.Demo;
         var standing = _exercise.Standing;
         if (demo is MovementDemo.Reach or MovementDemo.OpenChest or MovementDemo.HipExtension or MovementDemo.Hamstring or MovementDemo.Ankle or MovementDemo.SitStand or MovementDemo.Calf)
         {
-            SideFigure(dc, demo, standing, t); dc.Pop(); dc.Pop(); return;
+            SideFigure(dc, demo, standing, t); dc.Pop(); dc.Pop(); dc.Pop(); return;
         }
         var rise = demo == MovementDemo.SitStand ? 45 * t : 0;
         var ankleRise = demo == MovementDemo.Calf ? 10 * t : 0;
@@ -125,7 +139,7 @@ public sealed class MovementIllustration : FrameworkElement
         Limb(dc, Skin, 12, new(shoulderWidth + lean, shoulderY + 3), rightElbow, rightHand);
         if (demo == MovementDemo.OpenChest)
             Limb(dc, Brush("#BCD0BD"), 3, new(-10, shoulderY + 21 - t * 4), new(0, shoulderY + 17 - t * 4), new(10, shoulderY + 21 - t * 4));
-        dc.Pop(); dc.Pop();
+        dc.Pop(); dc.Pop(); dc.Pop();
     }
     private static void SideFigure(DrawingContext dc, MovementDemo demo, bool standing, double t)
     {

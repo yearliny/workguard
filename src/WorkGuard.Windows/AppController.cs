@@ -99,6 +99,12 @@ internal sealed class AppController : IDisposable
             quietHours ? DeliveryReason.QuietHours : quietFullscreen ? DeliveryReason.Fullscreen : away ? DeliveryReason.Idle :
             _reminder is not null ? DeliveryReason.ReminderOpen : DeliveryReason.Ready;
         Delivery.Advance(elapsed, reason);
+        // Even a paused exit prompt must remember a sleep/long-gap interruption before resuming.
+        if (elapsed > TimeSpan.FromSeconds(10))
+        {
+            _break?.PauseForInterruption();
+            _maintenance?.PauseForInterruption();
+        }
         if (unavailable)
         {
             Engine.Advance(elapsed, new(TimeSpan.Zero, Unavailable: true));
