@@ -23,7 +23,7 @@ public sealed record Preferences
     public bool InferNaturalRest { get; init; } = true;
     public bool QuietWhenFullscreen { get; init; } = true;
     public bool GentleOnly { get; init; } = true;
-    public bool StartWithWindows { get; init; }
+    public bool StartWithWindows { get; init; } = true;
     public bool OnboardingComplete { get; init; }
     public bool ReduceMotion { get; init; }
     public bool SoundEnabled { get; init; } = true;
