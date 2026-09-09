@@ -22,8 +22,6 @@ function New-IconPng([int]$size) {
         $sand = [System.Drawing.Color]::FromArgb(255, 211, 183, 130)
         $halo = [System.Drawing.Color]::FromArgb(82, 255, 255, 255)
 
-        # A light, open sprout mark: no badge/background, enough contrast for both
-        # light and dark Windows taskbars, and simple enough to survive 16px.
         $haloPen = New-Object System.Drawing.Pen($halo, ([Math]::Max(1.3, 4.7 * $scale)))
         $stemPen = New-Object System.Drawing.Pen($sage, ([Math]::Max(1.2, 3.2 * $scale)))
         $stemPen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
@@ -79,8 +77,9 @@ try {
     for ($i = 0; $i -lt $images.Count; $i++) {
         $size = $sizes[$i]
         $png = $images[$i]
-        $writer.Write([Byte](if ($size -eq 256) { 0 } else { $size }))
-        $writer.Write([Byte](if ($size -eq 256) { 0 } else { $size }))
+        $dimension = if ($size -eq 256) { 0 } else { $size }
+        $writer.Write([Byte]$dimension)
+        $writer.Write([Byte]$dimension)
         $writer.Write([Byte]0)
         $writer.Write([Byte]0)
         $writer.Write([UInt16]1)
