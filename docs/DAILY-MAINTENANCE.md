@@ -1,6 +1,6 @@
 # 每日身体维护：首版实现与验收
 
-状态：开发中，尚未发布。基于 main `8cafb4738a0cb332906cb39e34f29cc636df1b80`。
+状态：0.9.0-preview.1 已构建为 PR 试用包，尚未合并或发布到 Releases。基于 main `8cafb4738a0cb332906cb39e34f29cc636df1b80`。
 
 ## 用户流程
 
@@ -37,11 +37,11 @@ Core 不读取系统时间；Advance 接受单调时钟差值和本地时间样�
 
 ## 验收状态
 
-- 已完成一次 XAML XML 语法检查和 `git diff --check`；这两项不等于 C# 编译或 WPF 运行验证。
-- 已新增 15 项 Core/Data 行为测试，并接入原测试运行器；尚未执行。
-- 已新增 Windows 控制器与界面检查，覆盖准备时长、暂停/睡眠、确认、记录去重、重启持久化、不适退出及保存失败重试；尚未执行。
-- 当前 Linux 执行环境没有 .NET SDK，SDK 下载不可用；终端曾短暂中断后恢复，仍不能宣称构建通过。
-- 用户已于本轮明确批准上传。开发分支 `work/daily-maintenance` 与 [PR #8](https://github.com/yearliny/workguard/pull/8) 已创建，等待 GitHub Actions 检查。
+- [GitHub Actions 验证](https://github.com/yearliny/workguard/actions/runs/34325500012) 已通过，验证代码为 `d86f2bb6f0575c332fbfa65c63730ca90ebbc0d7`。
+- 78/78 项 Core/Data 行为测试通过，包含新增 15 项维护行为测试；Windows Release 编译、原生交互和精简包启动检查通过。
+- Windows 控制器检查覆盖准备时长、暂停/睡眠间隙、确认、记录去重、重启持久化、不适退出、保存失败重试，以及普通活动不重新推荐禁用动作。
+- 已查看 30–35 号实际 WPF 截图。修正跟练页布局后，默认及 760×640 窗口内均无需滚动即可看到倒计时、下一动作和停止按钮。截图检查另发现全部动作禁用时按钮误称“今日已完成”，已将其改为“暂无可用动作”。
+- [PR #8](https://github.com/yearliny/workguard/pull/8) 跟踪最终提交与自动检查；[0.9.0-preview.1 精简试用包](https://github.com/yearliny/workguard/actions/runs/34325500012/artifacts/10093647291) 来自上述验证代码，不含其后的按钮文案修正。Actions 产物保留 30 天。
 
 本 PR 使用仓库既有 CI：
 
@@ -51,4 +51,4 @@ dotnet build WorkGuard.slnx -c Release
 ./scripts/smoke-windows.ps1
 ```
 
-必须查看新增的 30–35 号维护窗口截图，检查小屏幕/DPI、动作示意、语音停播及副屏释放；Windows 10/11 人工验收仍单独保留。验证后再更新版本号与发布说明。
+Windows Runner 不等于 Windows 10/11 实机日常验收。混合 DPI、真实多屏热插拔、中文语音听感及教学示意的逐动作专业复核仍待完成。截图是界面布局证据，不能证明语音效果、动作正确性或健康改善。

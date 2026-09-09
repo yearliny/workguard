@@ -1,6 +1,8 @@
-## 每日身体维护开发分支（尚未验收）
+## 0.9.0-preview.1 每日身体维护
 
-本地 XAML XML 语法与 diff 空白检查通过。新增 14 项 Core/Data 行为测试和 Windows 控制器检查尚未执行；当前环境没有 .NET SDK；用户已批准上传，开发分支和 PR #8 已创建，等待 CI。以下历史版本验证记录不适用于本次新增功能。
+[CI 运行记录](https://github.com/yearliny/workguard/actions/runs/34325500012) 对代码 `d86f2bb6f0575c332fbfa65c63730ca90ebbc0d7` 完成验证：78/78 项核心行为测试、Windows Release 编译、真实 WPF 交互、精简包启动均通过。新增检查覆盖维护计时、确认与持久化，以及禁用动作在普通活动中的排除。已查看 30–35 号截图，默认与紧凑跟练页的倒计时、下一动作和停止按钮完整可见。
+
+[PR #8](https://github.com/yearliny/workguard/pull/8) 跟踪最后的按钮文案修正及文档更新。当前仅提供 PR 构建产物，尚未合并或发布到 Releases。Win10/Win11 实机、混合 DPI、真实多屏、中文语音听感和专业动作内容复核仍保留人工验收边界。
 
 详见 [每日维护实现说明](DAILY-MAINTENANCE.md)。
 
