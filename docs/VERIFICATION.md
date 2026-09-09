@@ -1,6 +1,6 @@
 ## 每日身体维护开发分支（尚未验收）
 
-本地 XAML XML 语法与 diff 空白检查通过。新增 14 项 Core/Data 行为测试和 Windows 控制器检查尚未执行；当前环境没有 .NET SDK，向 GitHub 上传的操作被自动审批拦截，因而未运行 CI。以下历史版本验证记录不适用于本次新增功能。
+本地 XAML XML 语法与 diff 空白检查通过。新增 14 项 Core/Data 行为测试和 Windows 控制器检查尚未执行；当前环境没有 .NET SDK；用户已批准上传，开发分支和 PR #8 已创建，等待 CI。以下历史版本验证记录不适用于本次新增功能。
 
 详见 [每日维护实现说明](DAILY-MAINTENANCE.md)。
 

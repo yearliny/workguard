@@ -41,9 +41,9 @@ Core 不读取系统时间；Advance 接受单调时钟差值和本地时间样�
 - 已新增 14 项 Core/Data 行为测试，并接入原测试运行器；尚未执行。
 - 已新增 Windows 控制器与界面检查，覆盖准备时长、暂停/睡眠、确认、记录去重、重启持久化、不适退出及保存失败重试；尚未执行。
 - 当前 Linux 执行环境没有 .NET SDK，SDK 下载不可用；终端曾短暂中断后恢复，仍不能宣称构建通过。
-- 自动审批拒绝向 GitHub 上传源代码改动，因此没有创建远端提交、PR 或触发 Windows CI。
+- 用户已于本轮明确批准上传。开发分支 `work/daily-maintenance` 与 [PR #8](https://github.com/yearliny/workguard/pull/8) 已创建，等待 GitHub Actions 检查。
 
-上传获批后运行仓库既有 CI：
+本 PR 使用仓库既有 CI：
 
 ```powershell
 dotnet run --project tests/WorkGuard.Tests -c Release
