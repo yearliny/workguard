@@ -329,6 +329,13 @@ internal static class SmokeTest
         Capture(window, "36-maintenance-preview");
         window.Width = 760; window.Height = 640; Capture(window, "37-maintenance-preview-compact");
         Check(window.StartButton.IsVisible && window.PreviewSelector.IsVisible, "Compact preview hides navigation or start");
+        var previewBounds = window.Demonstration.TransformToAncestor(window.ContentScroll).TransformBounds(new Rect(window.Demonstration.RenderSize));
+        Check(previewBounds.Top >= 0 && previewBounds.Bottom <= window.ContentScroll.ActualHeight + 1,
+            "Compact preview clips body or readable captions");
+        window.PreviewSelector.IsDropDownOpen = true; Pump(30);
+        Check(window.PreviewSelector.ItemContainerGenerator.ContainerFromIndex(1) is ComboBoxItem item && item.IsVisible,
+            "Styled preview picker did not show its actions");
+        window.PreviewSelector.IsDropDownOpen = false;
         window.PreviewSelector.SelectedIndex = 1;
         Click(window, "StartButton");
         Check(window.Session.Index == 0 && window.PreviewPanel.Visibility == Visibility.Collapsed &&

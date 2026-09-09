@@ -41,8 +41,14 @@ public partial class MaintenanceWindow : Window
     }
     private void FitContent()
     {
-        Demonstration.Height = !HasStarted ? 180 : ActualHeight < 720 ? 160 : ActualHeight < 860 ? 240 : 300;
+        Demonstration.Height = !HasStarted ? (ActualHeight < 720 ? 136 : 200) : ActualHeight < 720 ? 160 : ActualHeight < 860 ? 240 : 300;
         Countdown.FontSize = ActualWidth < 800 ? 48 : 64; Heading.FontSize = ActualWidth < 800 ? 28 : 34;
+        Phase.Visibility = HasStarted ? Visibility.Visible : Visibility.Collapsed;
+        TimerPanel.Visibility = HasStarted ? Visibility.Visible : Visibility.Collapsed;
+        TimerColumn.Width = HasStarted ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
+        Cue.FontSize = HasStarted ? 17 : 16; Cue.LineHeight = HasStarted ? 28 : 26;
+        Cue.Margin = new Thickness(0, HasStarted ? 16 : 12, 0, 0);
+        DemonstrationLayout.Margin = new Thickness(0, HasStarted ? 22 : 8, 0, 8);
     }
     private void RenderPreview()
     {
@@ -63,7 +69,7 @@ public partial class MaintenanceWindow : Window
         FitContent();
     }
     private void Preview_Changed(object sender, SelectionChangedEventArgs e)
-    { _previewSide = 1; RenderPreview(); }
+    { _previewSide = 1; RenderPreview(); ContentScroll?.ScrollToTop(); }
     private void PreviewMotion_Click(object sender, RoutedEventArgs e)
     { if (!HasStarted) { _previewPlaying = !_previewPlaying; RenderPreview(); } }
     private void PreviewSide_Click(object sender, RoutedEventArgs e)
@@ -89,7 +95,7 @@ public partial class MaintenanceWindow : Window
         StatusNote.Text = "动作以舒适为准 · 疼痛、麻木或头晕时，请停止";
         ReplaceButton.Visibility = DiscomfortButton.Visibility = Visibility.Visible;
         SkipButton.Visibility = _strict ? Visibility.Collapsed : Visibility.Visible;
-        FitContent(); Render(); DiscomfortButton.Focus();
+        FitContent(); Render(); ContentScroll.ScrollToTop(); DiscomfortButton.Focus();
     }
     public void Tick(TimeSpan elapsed, DateTimeOffset end)
     {

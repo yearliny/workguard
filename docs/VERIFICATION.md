@@ -1,3 +1,9 @@
+## 0.9.0-preview.2 动作预览与退出暂停
+
+[PR #9](https://github.com/yearliny/workguard/pull/9) 完善开始前的动作预览、左右侧示意、紧凑布局和强制退出确认暂停。[首轮 CI](https://github.com/yearliny/workguard/actions/runs/34332749537) 对 `7ac983cdb254a5caa655ec23c11d8a5b707ea0a9` 完成 78 项核心测试、Windows 编译、原生交互和精简包检查，全部通过。
+
+已查看预览、右侧、交替抬膝、退出暂停截图；发现紧凑预览截断人物后，移除预览中的重复大计时器并调整布局，新增完整示意可见与选择框展开检查。最终 CI 及精简试用包见对应 PR。本轮沿用已有动作内容，不宣称完成语音听感、Win10/11 实机或临床内容验收。
+
 ## 0.9.0-preview.1 每日身体维护
 
 [CI 运行记录](https://github.com/yearliny/workguard/actions/runs/34325500012) 对代码 `d86f2bb6f0575c332fbfa65c63730ca90ebbc0d7` 完成验证：78/78 项核心行为测试、Windows Release 编译、真实 WPF 交互、精简包启动均通过。新增检查覆盖维护计时、确认与持久化，以及禁用动作在普通活动中的排除。已查看 30–35 号截图，默认与紧凑跟练页的倒计时、下一动作和停止按钮完整可见。

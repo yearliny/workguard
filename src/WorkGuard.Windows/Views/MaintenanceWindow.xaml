@@ -1,5 +1,36 @@
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:ui="clr-namespace:WorkGuard.Windows.Views" x:Class="WorkGuard.Windows.Views.MaintenanceWindow" Style="{StaticResource AppWindow}" Title="工作防沉迷 · 每日身体维护" Width="1000" Height="760" MinWidth="640" MinHeight="520" WindowStartupLocation="CenterScreen" Background="#EEF2E8" KeyDown="Window_KeyDown">
-  <Window.Resources><Style TargetType="Button" BasedOn="{StaticResource RestButton}"/></Window.Resources>
+  <Window.Resources>
+    <Style TargetType="Button" BasedOn="{StaticResource RestButton}"/>
+    <Style x:Key="PreviewChoice" TargetType="ComboBoxItem">
+      <Setter Property="Padding" Value="12,9"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ComboBoxItem">
+        <Border x:Name="Choice" CornerRadius="8" Padding="{TemplateBinding Padding}" Background="Transparent"><ContentPresenter/></Border>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsHighlighted" Value="True"><Setter TargetName="Choice" Property="Background" Value="#E8EDE3"/></Trigger>
+          <Trigger Property="IsSelected" Value="True"><Setter TargetName="Choice" Property="Background" Value="#D9E5D7"/></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style x:Key="PreviewPicker" TargetType="ComboBox">
+      <Setter Property="FontSize" Value="15"/><Setter Property="ItemContainerStyle" Value="{StaticResource PreviewChoice}"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ComboBox">
+        <Grid>
+          <Border x:Name="PickerBorder" CornerRadius="12" Background="#F7F8F1" BorderBrush="#CAD6C9" BorderThickness="1"/>
+          <ToggleButton Focusable="False" ClickMode="Press" IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}" AutomationProperties.Name="展开动作列表">
+            <ToggleButton.Template><ControlTemplate TargetType="ToggleButton"><Border Background="Transparent"/></ControlTemplate></ToggleButton.Template>
+          </ToggleButton>
+          <ContentPresenter Margin="14,10,40,10" VerticalAlignment="Center" IsHitTestVisible="False" Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"/>
+          <Path Data="M 0 0 L 5 5 L 10 0" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.5" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,15,0" IsHitTestVisible="False"/>
+          <Popup x:Name="PART_Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}" AllowsTransparency="True" Focusable="False">
+            <Border MinWidth="{TemplateBinding ActualWidth}" Background="#F7F8F1" BorderBrush="#CAD6C9" BorderThickness="1" CornerRadius="12" Padding="6" Margin="0,4,0,0">
+              <ScrollViewer MaxHeight="260" CanContentScroll="True" VerticalScrollBarVisibility="Auto"><ItemsPresenter/></ScrollViewer>
+            </Border>
+          </Popup>
+        </Grid>
+        <ControlTemplate.Triggers><Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="PickerBorder" Property="BorderBrush" Value="{StaticResource AccentBrush}"/></Trigger></ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+  </Window.Resources>
   <DockPanel Margin="28">
     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
       <Button x:Name="ExitButton" DockPanel.Dock="Right" Style="{StaticResource RestTextButton}" Content="退出 · Esc" Click="Exit_Click"/>
@@ -27,20 +58,20 @@
         <ProgressBar x:Name="TotalProgress" Height="4" Maximum="100" BorderThickness="0" Background="#D9E2D3" Foreground="{StaticResource AccentBrush}" AutomationProperties.Name="本次维护总进度"/>
       </StackPanel>
     </StackPanel>
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <ScrollViewer x:Name="ContentScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
       <StackPanel MaxWidth="1000" VerticalAlignment="Center" Margin="0,12">
         <StackPanel x:Name="PracticePanel">
-          <DockPanel x:Name="PreviewPanel" MaxWidth="580" Margin="0,0,0,20">
+          <DockPanel x:Name="PreviewPanel" MaxWidth="580" Margin="0,0,0,12">
             <TextBlock Text="这次的动作" VerticalAlignment="Center" Margin="0,0,16,0"/>
-            <ComboBox x:Name="PreviewSelector" DisplayMemberPath="Label" SelectedValuePath="Index" SelectionChanged="Preview_Changed" AutomationProperties.Name="预览本次动作"/>
+            <ComboBox x:Name="PreviewSelector" Style="{StaticResource PreviewPicker}" DisplayMemberPath="Label" SelectedValuePath="Index" SelectionChanged="Preview_Changed" AutomationProperties.Name="预览本次动作"/>
           </DockPanel>
           <TextBlock x:Name="Phase" Text="给身体几分钟，慢慢活动一下" TextAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,10"/>
           <TextBlock x:Name="Heading" Text="让身体，保留活动的空间" TextAlignment="Center" FontSize="34" FontWeight="SemiBold"/>
           <TextBlock x:Name="Cue" TextAlignment="Center" MaxWidth="680" FontSize="17" LineHeight="28" Margin="0,16,0,0"/>
-          <Grid Margin="0,22,0,8">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="1.35*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+          <Grid x:Name="DemonstrationLayout" Margin="0,22,0,8">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="1.35*"/><ColumnDefinition x:Name="TimerColumn" Width="*"/></Grid.ColumnDefinitions>
             <ui:MovementIllustration x:Name="Demonstration" Height="270" MaxWidth="580" Margin="0,8"/>
-            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0">
+            <StackPanel x:Name="TimerPanel" Grid.Column="1" VerticalAlignment="Center" Margin="12,0">
               <TextBlock x:Name="Countdown" FontSize="64" FontWeight="Light" TextAlignment="Center"/>
               <TextBlock x:Name="TimerLabel" Text="预计总时长 · 含动作准备" FontSize="12" TextAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0"/>
               <TextBlock x:Name="Next" TextAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,24,0,0" FontSize="13"/>
