@@ -34,9 +34,19 @@ public partial class App : Application
         {
             var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WorkGuard");
             Directory.CreateDirectory(folder);
-            // Prevent another Windows session for this user from writing the same statistics.
             _dataLock = new FileStream(Path.Combine(folder, "instance.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
             _controller = new AppController(folder);
+            try
+            {
+                // Keep the per-user Run entry aligned with the current installed/portable location.
+                // This repairs upgrades or folder moves without creating duplicate startup entries.
+                WindowsActivity.ReconcileStartup(_controller.State.Preferences.StartWithWindows);
+            }
+            catch (Exception startupError) when (startupError is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+            {
+                // Startup registration is useful but must never prevent the app itself from running.
+                Diagnostics.Record(startupError);
+            }
             _activationWait = ThreadPool.RegisterWaitForSingleObject(_activate, (_, _) =>
             {
                 if (!_exiting) Dispatcher.BeginInvoke(new Action(() => { if (!_exiting) _controller?.ShowDashboard(); }));
