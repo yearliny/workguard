@@ -20,8 +20,9 @@ if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne $tag) {
 }
 
 $packages = @(
-    "WorkGuard-$Version-win-x64-lite.zip",
-    "WorkGuard-$Version-win-x64-setup.exe"
+    "WorkGuard-$Version-win-x64-setup-selfcontained.exe",
+    "WorkGuard-$Version-win-x64-setup-lite.exe",
+    "WorkGuard-$Version-win-x64-portable-lite.zip"
 )
 $expected = @($packages + 'SHA256SUMS-win-x64.txt')
 $assets = @($expected | ForEach-Object {
@@ -30,7 +31,8 @@ $assets = @($expected | ForEach-Object {
     (Resolve-Path $path).Path
 })
 
-$hashLines = @(Get-Content (Join-Path $ArtifactsDirectory 'SHA256SUMS-win-x64.txt'))
+$hashLines = @(Get-Content (Join-Path $ArtifactsDirectory 'SHA256SUMS-win-x64.txt') |
+    Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
 if ($hashLines.Count -ne $packages.Count) { throw "Expected $($packages.Count) package checksums." }
 foreach ($name in $packages) {
     $line = @($hashLines | Where-Object { $_ -match ('^[a-f0-9]{64}  ' + [regex]::Escape($name) + '$') })
@@ -51,20 +53,21 @@ if ($existing.Count -gt 0 -and -not $existing[0].isDraft) {
 $notes = @"
 工作防沉迷 $Version · 每天一点，活动自如。源码：$Commit
 
-- 正式提供 Windows 安装器：单用户安装，无需管理员权限，内置 .NET 运行时，安装后可直接使用。
-- 自动更新：后台低频检查公开更新清单，发现新版本后自动下载并校验 SHA-256；用户可从系统托盘一键安装。
-- 源码仓库保持私有；公开分发端只包含安装包与最小更新清单，不暴露源码或访问令牌。
-- 同时保留 lite.zip 精简版，适合已经安装 .NET 10 Desktop Runtime 的用户。
-- 应用图标、任务栏和托盘统一为轻量品牌图标。
-- 登录 Windows 时启动支持在设置中关闭；安装目录变化后会自动修复启动项路径。
+本版本将 Windows 分发明确拆成三种形态：
+
+1. **Installer + self-contained .NET**：普通用户推荐，无需预装 .NET，安装后即可使用；自动更新也使用这个版本。
+2. **Installer + 不带 .NET**：安装体验完整，但需要预先安装 .NET 10 Desktop Runtime x64，安装包更小。
+3. **便携版 + 不带 .NET**：无需安装，解压即用，同样需要 .NET 10 Desktop Runtime x64。
 
 ## 下载建议
 
-普通用户请选择 **WorkGuard-$Version-win-x64-setup.exe**。安装到当前用户目录，不需要管理员权限，也不需要单独安装 .NET。
+- 首选 **WorkGuard-$Version-win-x64-setup-selfcontained.exe**：最省心，无需单独安装 .NET。
+- 已安装 .NET 10 Desktop Runtime 的用户可选 **WorkGuard-$Version-win-x64-setup-lite.exe**，获得更小的安装包。
+- 不希望安装程序的用户可选 **WorkGuard-$Version-win-x64-portable-lite.zip**，完整解压后直接运行 `WorkGuard.exe`。
 
-高级用户可选择 **WorkGuard-$Version-win-x64-lite.zip**；该版本需要 .NET 10 Desktop Runtime x64。
+自动更新始终下载 self-contained Installer，从而不依赖目标电脑当前是否安装 .NET。
 
-目标为 Windows 10 22H2 / Windows 11 x64。`SHA256SUMS-win-x64.txt` 提供所有发布包的 SHA-256 校验值。
+目标为 Windows 10 22H2 / Windows 11 x64。`SHA256SUMS-win-x64.txt` 提供全部三个发布包的 SHA-256 校验值。
 
 当前构建尚未进行商业代码签名，因此 Windows SmartScreen 仍可能提示未知发布者。
 "@

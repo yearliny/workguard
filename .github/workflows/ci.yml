@@ -41,11 +41,12 @@ jobs:
           WORKGUARD_CAPTURE_DIR: artifacts/screenshots
         run: ./scripts/smoke-windows.ps1
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && github.event_name != 'pull_request'
+        continue-on-error: true
         with:
           name: windows-ui
           path: artifacts/screenshots/*.png
-          retention-days: 30
+          retention-days: 7
       - name: Read application version
         id: version
         shell: pwsh
@@ -53,7 +54,7 @@ jobs:
           $version = ([xml](Get-Content src/WorkGuard.Windows/WorkGuard.Windows.csproj -Raw)).Project.PropertyGroup.Version
           if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') { throw 'Invalid application version.' }
           "version=$version" >> $env:GITHUB_OUTPUT
-      - name: Package lightweight Windows app
+      - name: Build framework-dependent portable package
         shell: pwsh
         run: ./scripts/publish.ps1 -Runtime win-x64 -SkipTests
       - name: Install Inno Setup compiler
@@ -63,22 +64,40 @@ jobs:
             choco install innosetup --yes --no-progress
             if ($LASTEXITCODE -ne 0) { throw 'Unable to install Inno Setup.' }
           }
-      - name: Build self-contained Windows installer
+      - name: Build self-contained and framework-dependent installers
         shell: pwsh
-        run: ./scripts/installer.ps1 -Runtime win-x64 -SkipTests
+        run: ./scripts/installer.ps1 -Runtime win-x64 -Mode both -SkipTests
       - name: Verify packaged application
         shell: pwsh
         run: |
-          ./scripts/smoke-windows.ps1 -Executable ./artifacts/publish/win-x64/lite/WorkGuard.exe
+          ./scripts/smoke-windows.ps1 -Executable ./artifacts/publish/win-x64/portable-lite/WorkGuard.exe
+          $version = '${{ steps.version.outputs.version }}'
+          $expected = @(
+            "artifacts/WorkGuard-$version-win-x64-portable-lite.zip",
+            "artifacts/WorkGuard-$version-win-x64-setup-selfcontained.exe",
+            "artifacts/WorkGuard-$version-win-x64-setup-lite.exe",
+            "artifacts/SHA256SUMS-win-x64.txt"
+          )
+          foreach ($path in $expected) { if (-not (Test-Path $path -PathType Leaf)) { throw "Missing package: $path" } }
+          $lines = @(Get-Content artifacts/SHA256SUMS-win-x64.txt | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+          if ($lines.Count -ne 3) { throw 'Expected exactly three package checksums.' }
+          foreach ($package in $expected[0..2]) {
+            $name = Split-Path $package -Leaf
+            $line = @($lines | Where-Object { $_ -match ('^[a-f0-9]{64}  ' + [regex]::Escape($name) + '$') })
+            if ($line.Count -ne 1) { throw "Missing checksum: $name" }
+            if ((Get-FileHash $package -Algorithm SHA256).Hash.ToLowerInvariant() -ne $line[0].Substring(0, 64)) { throw "Checksum mismatch: $name" }
+          }
       - uses: actions/upload-artifact@v4
+        if: github.event_name != 'pull_request'
         with:
           name: WorkGuard-${{ steps.version.outputs.version }}-win-x64
           path: |
-            artifacts/WorkGuard-${{ steps.version.outputs.version }}-win-x64-*.zip
-            artifacts/WorkGuard-${{ steps.version.outputs.version }}-win-x64-setup.exe
+            artifacts/WorkGuard-${{ steps.version.outputs.version }}-win-x64-portable-lite.zip
+            artifacts/WorkGuard-${{ steps.version.outputs.version }}-win-x64-setup-selfcontained.exe
+            artifacts/WorkGuard-${{ steps.version.outputs.version }}-win-x64-setup-lite.exe
             artifacts/SHA256SUMS-win-x64.txt
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 7
   release:
     needs: windows
     if: (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && github.event_name != 'pull_request'
