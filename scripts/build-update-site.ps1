@@ -7,7 +7,9 @@ param(
 $ErrorActionPreference = 'Stop'
 if ($Version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') { throw 'Invalid version.' }
 
-$installerName = "WorkGuard-$Version-win-x64-setup.exe"
+# Automatic updates deliberately use the self-contained installer so update
+# success never depends on whether the target PC already has the .NET runtime.
+$installerName = "WorkGuard-$Version-win-x64-setup-selfcontained.exe"
 $installer = Join-Path $ArtifactsDirectory $installerName
 $checksums = Join-Path $ArtifactsDirectory 'SHA256SUMS-win-x64.txt'
 if (-not (Test-Path $installer -PathType Leaf)) { throw "Missing installer: $installerName" }
@@ -38,4 +40,4 @@ $manifest | ConvertTo-Json | Set-Content (Join-Path $update 'win-x64.json') -Enc
 "@ | Set-Content (Join-Path $OutputDirectory 'index.html') -Encoding utf8
 Set-Content (Join-Path $OutputDirectory '.nojekyll') -Value '' -Encoding ascii
 
-Write-Host "Prepared public update feed for $Version"
+Write-Host "Prepared public self-contained update feed for $Version"

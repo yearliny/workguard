@@ -9,6 +9,9 @@
 #ifndef OutputDir
   #error OutputDir must be supplied by the build script.
 #endif
+#ifndef OutputBase
+  #error OutputBase must be supplied by the build script.
+#endif
 
 [Setup]
 AppId={{B632BA27-C541-4E56-BC41-40A9721199E4}
@@ -25,7 +28,7 @@ PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir={#OutputDir}
-OutputBaseFilename=WorkGuard-{#AppVersion}-win-x64-setup
+OutputBaseFilename={#OutputBase}
 SetupIconFile=..\src\WorkGuard.Windows\Assets\WorkGuard.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 UninstallDisplayName={#MyAppName}

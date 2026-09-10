@@ -9,7 +9,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\WorkGuard.ico</ApplicationIcon>
     <AssemblyName>WorkGuard</AssemblyName>
-    <Version>0.10.0-preview.1</Version>
+    <Version>0.10.0-preview.2</Version>
     <Product>工作防沉迷</Product>
     <Description>让休息自然发生的 Windows 桌面工具</Description>
   </PropertyGroup>
