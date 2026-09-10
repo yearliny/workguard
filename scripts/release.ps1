@@ -31,7 +31,8 @@ $assets = @($expected | ForEach-Object {
     (Resolve-Path $path).Path
 })
 
-$hashLines = @(Get-Content (Join-Path $ArtifactsDirectory 'SHA256SUMS-win-x64.txt'))
+$hashLines = @(Get-Content (Join-Path $ArtifactsDirectory 'SHA256SUMS-win-x64.txt') |
+    Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
 if ($hashLines.Count -ne $packages.Count) { throw "Expected $($packages.Count) package checksums." }
 foreach ($name in $packages) {
     $line = @($hashLines | Where-Object { $_ -match ('^[a-f0-9]{64}  ' + [regex]::Escape($name) + '$') })
