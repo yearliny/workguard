@@ -27,6 +27,15 @@ try {
     $outputDir = (Resolve-Path $artifactDir).Path
     $flavors = if ($Mode -eq 'both') { @('selfcontained', 'lite') } else { @($Mode) }
 
+    $checksumPath = Join-Path $artifactDir "SHA256SUMS-$Runtime.txt"
+    $baseChecksumLines = if (Test-Path $checksumPath) {
+        @(Get-Content $checksumPath | Where-Object {
+            -not [string]::IsNullOrWhiteSpace($_) -and
+            $_ -notmatch '  WorkGuard-.*-win-x64-setup-(selfcontained|lite)\.exe$'
+        })
+    } else { @() }
+    $installerChecksumLines = @()
+
     foreach ($flavor in $flavors) {
         $selfContained = $flavor -eq 'selfcontained'
         $stage = Join-Path $root "artifacts/publish/$Runtime/installer-$flavor"
@@ -50,12 +59,14 @@ try {
         if (-not (Test-Path $installer -PathType Leaf)) { throw "Installer was not created: $name" }
 
         $hash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant()
-        $checksumPath = Join-Path $artifactDir "SHA256SUMS-$Runtime.txt"
-        $existing = if (Test-Path $checksumPath) { @(Get-Content $checksumPath | Where-Object { $_ -notmatch ('  ' + [regex]::Escape($name) + '$') }) } else { @() }
-        Set-Content $checksumPath -Value @($existing + "$hash  $name") -Encoding ascii
+        $installerChecksumLines += "$hash  $name"
 
         Write-Host "Created $name ($((Get-Item $installer).Length) bytes)"
     }
+
+    # Rebuild once, deterministically. This avoids scalar/array and blank-line
+    # surprises from incrementally rewriting the checksum file per installer.
+    Set-Content $checksumPath -Value @($baseChecksumLines + $installerChecksumLines) -Encoding ascii
 }
 finally {
     Pop-Location
