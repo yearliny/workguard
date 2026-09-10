@@ -41,11 +41,12 @@ jobs:
           WORKGUARD_CAPTURE_DIR: artifacts/screenshots
         run: ./scripts/smoke-windows.ps1
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && github.event_name != 'pull_request'
+        continue-on-error: true
         with:
           name: windows-ui
           path: artifacts/screenshots/*.png
-          retention-days: 30
+          retention-days: 7
       - name: Read application version
         id: version
         shell: pwsh
@@ -70,7 +71,18 @@ jobs:
         shell: pwsh
         run: |
           ./scripts/smoke-windows.ps1 -Executable ./artifacts/publish/win-x64/portable-lite/WorkGuard.exe
+          $version = '${{ steps.version.outputs.version }}'
+          $expected = @(
+            "artifacts/WorkGuard-$version-win-x64-portable-lite.zip",
+            "artifacts/WorkGuard-$version-win-x64-setup-selfcontained.exe",
+            "artifacts/WorkGuard-$version-win-x64-setup-lite.exe",
+            "artifacts/SHA256SUMS-win-x64.txt"
+          )
+          foreach ($path in $expected) { if (-not (Test-Path $path -PathType Leaf)) { throw "Missing package: $path" } }
+          $lines = @(Get-Content artifacts/SHA256SUMS-win-x64.txt)
+          if ($lines.Count -ne 3) { throw 'Expected exactly three package checksums.' }
       - uses: actions/upload-artifact@v4
+        if: github.event_name != 'pull_request'
         with:
           name: WorkGuard-${{ steps.version.outputs.version }}-win-x64
           path: |
@@ -79,7 +91,7 @@ jobs:
             artifacts/WorkGuard-${{ steps.version.outputs.version }}-win-x64-setup-lite.exe
             artifacts/SHA256SUMS-win-x64.txt
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 7
   release:
     needs: windows
     if: (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && github.event_name != 'pull_request'
