@@ -79,8 +79,14 @@ jobs:
             "artifacts/SHA256SUMS-win-x64.txt"
           )
           foreach ($path in $expected) { if (-not (Test-Path $path -PathType Leaf)) { throw "Missing package: $path" } }
-          $lines = @(Get-Content artifacts/SHA256SUMS-win-x64.txt)
+          $lines = @(Get-Content artifacts/SHA256SUMS-win-x64.txt | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
           if ($lines.Count -ne 3) { throw 'Expected exactly three package checksums.' }
+          foreach ($package in $expected[0..2]) {
+            $name = Split-Path $package -Leaf
+            $line = @($lines | Where-Object { $_ -match ('^[a-f0-9]{64}  ' + [regex]::Escape($name) + '$') })
+            if ($line.Count -ne 1) { throw "Missing checksum: $name" }
+            if ((Get-FileHash $package -Algorithm SHA256).Hash.ToLowerInvariant() -ne $line[0].Substring(0, 64)) { throw "Checksum mismatch: $name" }
+          }
       - uses: actions/upload-artifact@v4
         if: github.event_name != 'pull_request'
         with:
