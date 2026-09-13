@@ -230,14 +230,14 @@ internal sealed class AppController : IDisposable
     internal IReadOnlyList<MaintenanceStep> MaintenancePlan(bool concentrated) => MaintenancePlanner.Build(State.Preferences,
         State.Days.FirstOrDefault(d => d.Date == DateOnly.FromDateTime(_localNow))?.MaintenanceSeconds ?? [], concentrated);
 
-    public void StartMaintenance(bool concentrated, bool beginImmediately = false, bool strict = false)
+    public void StartMaintenance(bool concentrated, bool beginImmediately = false, bool strict = false, bool shoulderNeck = false, bool hasBand = false)
     {
         if (_locked || _sleeping) return;
         if (_maintenance is not null) { _maintenance.Activate(); return; }
         if (_break is not null) { _break.Activate(); return; }
         if (_settings is not null) { _settings.Activate(); return; }
         if (_welcome is not null) { _welcome.Activate(); return; }
-        var plan = MaintenancePlan(concentrated);
+        var plan = shoulderNeck ? MaintenancePlanner.ShoulderNeck(State.Preferences, hasBand) : MaintenancePlan(concentrated);
         if (plan.Count == 0) { ShowMaintenance(); return; }
         DismissReminder();
         var window = new MaintenanceWindow(plan, strict, State.Preferences.MaintenanceVoice,

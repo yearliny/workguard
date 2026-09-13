@@ -158,6 +158,16 @@
                 <TextBlock x:Name="MaintenanceScheduleNote" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,12,0,0"/>
               </StackPanel>
             </Border>
+            <Border Background="#F5F2EB" CornerRadius="22" Padding="24" Margin="0,0,0,18">
+              <StackPanel>
+                <TextBlock Text="肩颈维护" FontSize="20" FontWeight="SemiBold"/>
+                <TextBlock Text="胸椎旋转与伸展 → 靠墙滑臂 → 轻弹力带拉开 → 颈部回正 → 肩膀放松" TextWrapping="Wrap" Margin="0,8,0,12"/>
+                <CheckBox x:Name="ShoulderBand" Content="已备好轻弹力带" Checked="ShoulderBand_Changed" Unchecked="ShoulderBand_Changed"/>
+                <Button x:Name="ShoulderRoutineButton" Content="预览肩颈维护" Click="ShoulderRoutine_Click" HorizontalAlignment="Left" Margin="0,12,0,8"/>
+                <TextBlock x:Name="ShoulderRoutineNote" TextWrapping="Wrap" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
+                <TextBlock Text="按自己的节奏完成次数，不赶倒计时；组间可暂停多休息。颈部动作需在维护偏好中单独开启。" TextWrapping="Wrap" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,0"/>
+              </StackPanel>
+            </Border>
             <TextBlock Text="今天活动过哪些部位" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12"/>
             <ItemsControl x:Name="MaintenanceAreas"><ItemsControl.ItemTemplate><DataTemplate>
               <DockPanel Margin="0,7"><TextBlock Text="{Binding Status}" DockPanel.Dock="Right" Foreground="{StaticResource MutedBrush}"/><TextBlock Text="{Binding Name}"/></DockPanel>

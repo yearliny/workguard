@@ -12,6 +12,28 @@ internal static class MaintenanceTests
     { var folder = Path.Combine(Path.GetTempPath(), "maintenance-" + Guid.NewGuid()); Directory.CreateDirectory(folder); try { action(folder); } finally { Directory.Delete(folder, true); } }
     public static (string Name, Action Run)[] All =>
     [
+        ("Shoulder routine preserves order, two sets and manual duration", () =>
+        {
+            var plan = MaintenancePlanner.ShoulderNeck(new Preferences { NeckMovements = true }, true);
+            Check(plan.Count == 8 && plan.Sum(s => s.TotalSeconds) == 490);
+            Check(string.Join(",", plan.Select(s => s.Exercise.Id)) == "thoracic-turn,thoracic-extension,wall-slide,wall-slide,band-pull-apart,band-pull-apart,neck-retraction,shoulder-shrug");
+            Check(plan[2].Exercise.Title.Contains("1/2") && plan[3].Exercise.Title.Contains("2/2"));
+            var session = new MaintenanceSession(plan); Run(session, session.TotalSeconds);
+            Check(session.FullyPracticed && !session.Confirmed);
+            Check(session.Confirm([2]).Sum(c => c.Seconds) == 60);
+            Check(session.Confirm([3]).Count == 0);
+        }),
+        ("Shoulder routine respects equipment, neck consent and blocked actions", () =>
+        {
+            var p = new Preferences();
+            var plan = MaintenancePlanner.ShoulderNeck(p, false);
+            Check(plan.All(s => s.Exercise.Area != BodyArea.Neck && s.Exercise.Id != "band-pull-apart"));
+            p = p with { MaintenanceStanding = false, NeckMovements = true, MaintenanceBlockedExercises = ["neck-retraction", "shoulder-shrug"] };
+            plan = MaintenancePlanner.ShoulderNeck(p, true);
+            Check(plan.All(s => !s.Exercise.Standing && s.Exercise.Id != "neck-retraction" && s.Exercise.Id != "shoulder-shrug"));
+            Check(MaintenancePlanner.ShoulderNeck(p with { MaintenanceExcludedAreas = BodyArea.All }, true).Count == 0);
+            Check(MaintenanceCatalog.Allowed(new Preferences { NeckMovements = true }).All(e => !e.RoutineOnly));
+        }),
         ("Maintenance restrictions also protect legacy movement and office fallback", () =>
         {
             var p = new Preferences { MaintenanceEnabled = true };
