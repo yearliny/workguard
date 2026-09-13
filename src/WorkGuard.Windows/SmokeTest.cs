@@ -300,6 +300,20 @@ internal static class SmokeTest
         app.Advance(TimeSpan.FromSeconds(1), now, TimeSpan.Zero, false);
         var dashboard = new DashboardWindow(app); windows.Add(dashboard); dashboard.Show();
         dashboard.Sections.SelectedItem = dashboard.MaintenanceTab; Capture(dashboard, "30-maintenance-today");
+        Check(dashboard.ShoulderRoutineButton.IsEnabled, "Shoulder routine entry unavailable");
+        dashboard.ShoulderBand.IsChecked = true;
+        Click(dashboard, "ShoulderRoutineButton");
+        var shoulder = Application.Current.Windows.OfType<MaintenanceWindow>().Single(w => w.IsVisible); windows.Add(shoulder);
+        Check(!shoulder.HasStarted && shoulder.Session.Steps.Count == 7 && shoulder.Countdown.Text == "07:15",
+            "Shoulder entry ignored equipment or enabled neck by default");
+        shoulder.PreviewSelector.SelectedIndex = 2;
+        Check(shoulder.Heading.Text.Contains("1/2") && shoulder.Cue.Text.Contains("8～12"), "Wall slide set preview missing");
+        Capture(shoulder, "41-shoulder-wall-slide");
+        shoulder.PreviewSelector.SelectedIndex = 4;
+        Check(shoulder.Cue.Text.Contains("12～20"), "Band preview missing repetitions");
+        Capture(shoulder, "42-shoulder-band");
+        Check(shoulder.Session.ObservedPractice == 0, "Shoulder preview credited practice");
+        shoulder.CloseForSystem();
         var settings = new SettingsWindow(app); windows.Add(settings); settings.Show();
         settings.Sections.SelectedItem = settings.MaintenanceTab; Capture(settings, "31-maintenance-preferences"); settings.Close();
         app.StartMaintenance(false);
