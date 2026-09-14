@@ -276,6 +276,7 @@ internal static class SmokeTest
                 Check(unwritable.DataError is not null && unwritable.State.LastOfficeReminderDate is null, "Failed save falsely marked invitation delivered");
                 Check(!Application.Current.Windows.OfType<ReminderWindow>().Any(w => w.IsVisible), "Invitation displayed before durable reservation");
                 VerifyMaintenance(folder, windows);
+                VerifyUpdateProxy(folder);
                 File.WriteAllText(resultFile, "PASS: WPF views, layout, settings validation, reminder focus policy, pause, completion, skip, tray, input API, foreground detection");
             }
             catch (Exception error)
@@ -291,6 +292,56 @@ internal static class SmokeTest
             Application.Current.Shutdown(0);
         }));
     }
+    private static void VerifyUpdateProxy(string folder)
+    {
+        const string version = "99.0.0-preview.2";
+        const string release = "https://github.com/yearliny/workguard/releases/download/v99.0.0-preview.2/WorkGuard-99.0.0-preview.2-win-x64-setup-selfcontained.exe";
+        const string legacy = "https://yearliny.github.io/workguard/downloads/WorkGuard-99.0.0-preview.2-win-x64-setup-selfcontained.exe";
+        Check(UpdateService.InstallerDownloadUri(version, release).AbsoluteUri == "https://ghfast.top/" + release, "Release proxy URL incorrect");
+        Check(UpdateService.InstallerDownloadUri(version, legacy) == UpdateService.InstallerDownloadUri(version, release), "Legacy feed not migrated to proxy");
+        foreach (var invalid in new[] { "https://ghfast.top/" + release, release.Replace("yearliny/workguard", "someone/other"),
+            release.Replace("github.com/", "github.com.evil.test/"), release.Replace("https:", "http:"), release + "?token=secret",
+            release.Replace("v99.0.0", "v98.0.0"), "https://yearliny.github.io/unrelated.exe" })
+        {
+            var rejected = false;
+            try { UpdateService.InstallerDownloadUri(version, invalid); } catch (InvalidDataException) { rejected = true; }
+            Check(rejected, "Untrusted installer destination accepted");
+        }
+        foreach (var corrupt in new[] { false, true })
+        {
+            var directory = Path.Combine(folder, "proxy-update-" + corrupt);
+            var payload = new byte[] { 77, 90, 1, 2, 3, 4 };
+            var manifest = System.Text.Json.JsonSerializer.Serialize(new { Version = version, Url = release,
+                Size = payload.Length, Sha256 = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(payload)) });
+            var handler = new UpdateTestHandler(manifest, corrupt ? new byte[] { 77, 90, 9, 9, 9, 9 } : payload);
+            using var service = new UpdateService(directory, handler);
+            var rejected = false;
+            PreparedUpdate? update = null;
+            try { update = service.CheckAndPrepareAsync(true).GetAwaiter().GetResult(); }
+            catch (InvalidDataException) { rejected = true; }
+            Check(handler.Requests.SequenceEqual(new[] { "https://yearliny.github.io/workguard/update/win-x64-proxy.json", "https://ghfast.top/" + release }), "Updater did not use intended feed and proxy");
+            Check(rejected == corrupt, "Corrupt proxy payload was accepted or valid payload failed");
+            Check(!Directory.EnumerateFiles(directory, "*.download", SearchOption.AllDirectories).Any(), "Temporary proxy download not cleaned");
+            if (!corrupt) Check(update is not null && File.ReadAllBytes(update.InstallerPath).SequenceEqual(payload), "Verified payload not prepared");
+            else Check(!Directory.EnumerateFiles(directory, "*.exe", SearchOption.AllDirectories).Any(), "Corrupt installer left ready to execute");
+        }
+    }
+
+    private sealed class UpdateTestHandler(string manifest, byte[] payload) : System.Net.Http.HttpMessageHandler
+    {
+        public List<string> Requests { get; } = [];
+        protected override System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage> SendAsync(
+            System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken)
+        {
+            Requests.Add(request.RequestUri!.AbsoluteUri);
+            Check(request.Headers.Authorization is null, "Updater sent credentials to proxy");
+            return System.Threading.Tasks.Task.FromResult(new System.Net.Http.HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = Requests.Count == 1 ? new System.Net.Http.StringContent(manifest) : new System.Net.Http.ByteArrayContent(payload)
+            });
+        }
+    }
+
     private static void VerifyMaintenance(string folder, List<Window> windows)
     {
         using var app = new AppController(Path.Combine(folder, "maintenance"));
