@@ -28,7 +28,7 @@ try {
     $flavors = if ($Mode -eq 'both') { @('selfcontained', 'lite') } else { @($Mode) }
 
     $checksumPath = Join-Path $artifactDir "SHA256SUMS-$Runtime.txt"
-    $baseChecksumLines = if (Test-Path $checksumPath) {
+    [string[]]$baseChecksumLines = if (Test-Path $checksumPath) {
         @(Get-Content $checksumPath | Where-Object {
             -not [string]::IsNullOrWhiteSpace($_) -and
             $_ -notmatch '  WorkGuard-.*-win-x64-setup-(selfcontained|lite)\.exe$'
@@ -64,6 +64,8 @@ try {
         Write-Host "Created $name ($((Get-Item $installer).Length) bytes)"
     }
 
+    # Keep even one portable checksum as an array: string + array joins entries
+    # into one line, while string[] + array preserves one checksum per line.
     # Rebuild once, deterministically. This avoids scalar/array and blank-line
     # surprises from incrementally rewriting the checksum file per installer.
     Set-Content $checksumPath -Value @($baseChecksumLines + $installerChecksumLines) -Encoding ascii
