@@ -72,6 +72,15 @@ jobs:
         run: |
           ./scripts/smoke-windows.ps1 -Executable ./artifacts/publish/win-x64/portable-lite/WorkGuard.exe
           $version = '${{ steps.version.outputs.version }}'
+          ./scripts/build-update-site.ps1 -Version $version
+          $proxyFeed = Get-Content artifacts/update-site/update/win-x64-proxy.json -Raw | ConvertFrom-Json
+          $legacyFeed = Get-Content artifacts/update-site/update/win-x64.json -Raw | ConvertFrom-Json
+          $installerName = "WorkGuard-$version-win-x64-setup-selfcontained.exe"
+          if ($proxyFeed.url -ne "https://github.com/yearliny/workguard/releases/download/v$version/$installerName") { throw 'Incorrect proxy feed origin.' }
+          if ($legacyFeed.url -ne "https://yearliny.github.io/workguard/downloads/$installerName") { throw 'Legacy update feed changed.' }
+          $legacyCopy = "artifacts/update-site/downloads/$installerName"
+          if ($proxyFeed.sha256 -ne $legacyFeed.sha256 -or $proxyFeed.size -ne $legacyFeed.size -or
+              (Get-FileHash $legacyCopy -Algorithm SHA256).Hash.ToLowerInvariant() -ne $legacyFeed.sha256) { throw 'Update feed payload mismatch.' }
           $expected = @(
             "artifacts/WorkGuard-$version-win-x64-portable-lite.zip",
             "artifacts/WorkGuard-$version-win-x64-setup-selfcontained.exe",

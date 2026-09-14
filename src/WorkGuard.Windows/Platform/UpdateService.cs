@@ -12,16 +12,18 @@ internal sealed record PreparedUpdate(string Version, string InstallerPath);
 
 internal sealed class UpdateService : IDisposable
 {
-    private static readonly Uri FeedUri = new("https://yearliny.github.io/workguard/update/win-x64.json");
+    private static readonly Uri FeedUri = new("https://yearliny.github.io/workguard/update/win-x64-proxy.json");
     private static readonly TimeSpan AutomaticCheckInterval = TimeSpan.FromHours(12);
     private const long MaximumInstallerBytes = 250L * 1024 * 1024;
 
     private readonly string _updatesDirectory;
     private readonly string _checkMarker;
-    private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(20) };
+    private readonly HttpClient _http;
 
-    public UpdateService(string dataDirectory)
+    public UpdateService(string dataDirectory, HttpMessageHandler? handler = null)
     {
+        _http = handler is null ? new HttpClient() : new HttpClient(handler);
+        _http.Timeout = TimeSpan.FromSeconds(20);
         _updatesDirectory = Path.Combine(dataDirectory, "updates");
         _checkMarker = Path.Combine(_updatesDirectory, "last-check.txt");
         _http.DefaultRequestHeaders.UserAgent.ParseAdd("WorkGuard-Updater/1.0");
@@ -51,7 +53,7 @@ internal sealed class UpdateService : IDisposable
         if (File.Exists(temporary)) File.Delete(temporary);
         try
         {
-            using var download = await _http.GetAsync(manifest.Url, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
+            using var download = await _http.GetAsync(InstallerDownloadUri(manifest.Version, manifest.Url), HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
             download.EnsureSuccessStatusCode();
             if (download.Content.Headers.ContentLength is > MaximumInstallerBytes)
                 throw new InvalidDataException("更新包超过允许大小。");
@@ -126,12 +128,25 @@ internal sealed class UpdateService : IDisposable
     private static void ValidateManifest(UpdateManifest manifest)
     {
         if (string.IsNullOrWhiteSpace(manifest.Version) || manifest.Version.Length > 64) throw new InvalidDataException("更新版本无效。");
-        if (!Uri.TryCreate(manifest.Url, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps ||
-            !uri.Host.Equals("yearliny.github.io", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("更新地址不受信任。");
+        _ = InstallerDownloadUri(manifest.Version, manifest.Url);
         if (manifest.Sha256 is null || manifest.Sha256.Length != 64 || manifest.Sha256.Any(c => !Uri.IsHexDigit(c)))
             throw new InvalidDataException("更新校验值无效。");
         if (manifest.Size <= 0 || manifest.Size > MaximumInstallerBytes) throw new InvalidDataException("更新包大小无效。");
+    }
+
+    // Keep the manifest/hash on our Pages origin. Only the public release binary
+    // uses the proxy; never accept arbitrary proxy destinations from a manifest.
+    internal static Uri InstallerDownloadUri(string version, string url)
+    {
+        if (string.IsNullOrEmpty(version) || version.Length > 64 ||
+            !System.Text.RegularExpressions.Regex.IsMatch(version, @"\A[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?\z"))
+            throw new InvalidDataException("更新版本无效。");
+        var name = $"WorkGuard-{version}-win-x64-setup-selfcontained.exe";
+        var release = $"https://github.com/yearliny/workguard/releases/download/v{version}/{name}";
+        var legacy = $"https://yearliny.github.io/workguard/downloads/{name}";
+        if (!string.Equals(url, release, StringComparison.Ordinal) && !string.Equals(url, legacy, StringComparison.Ordinal))
+            throw new InvalidDataException("更新地址不受信任。");
+        return new Uri("https://ghfast.top/" + release);
     }
 
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };

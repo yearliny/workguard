@@ -24,14 +24,17 @@ if (Test-Path $OutputDirectory) { Remove-Item $OutputDirectory -Recurse -Force }
 $downloads = Join-Path $OutputDirectory 'downloads'
 $update = Join-Path $OutputDirectory 'update'
 New-Item -ItemType Directory -Force -Path $downloads, $update | Out-Null
+# Retain the Pages copy for already-installed clients that only trust Pages.
 Copy-Item $installer (Join-Path $downloads $installerName)
 
 $manifest = [ordered]@{
     version = $Version
-    url = "https://yearliny.github.io/workguard/downloads/$installerName"
+    url = "https://github.com/yearliny/workguard/releases/download/v$Version/$installerName"
     sha256 = $sha
     size = (Get-Item $installer).Length
 }
+$manifest | ConvertTo-Json | Set-Content (Join-Path $update 'win-x64-proxy.json') -Encoding utf8
+$manifest.url = "https://yearliny.github.io/workguard/downloads/$installerName"
 $manifest | ConvertTo-Json | Set-Content (Join-Path $update 'win-x64.json') -Encoding utf8
 @"
 <!doctype html>
