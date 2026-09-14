@@ -59,6 +59,7 @@ public partial class DashboardWindow : Window
         ShortMaintenanceButton.IsEnabled = FullMaintenanceButton.IsEnabled = plan.Count > 0;
         ShortMaintenanceButton.Content = plan.Count > 0 ? "短维护 · " + TimeSpan.FromSeconds(plan.Sum(x => x.TotalSeconds)).ToString(@"mm\:ss") : "短维护";
         FullMaintenanceButton.Content = fullPlan.Count > 0 ? "今日剩余 · " + TimeSpan.FromSeconds(fullPlan.Sum(x => x.TotalSeconds)).ToString(@"mm\:ss") : allowedAreas.Count == 0 ? "暂无可用动作" : "今日已完成";
+        RefreshShoulderRoutine();
         MaintenanceScheduleNote.Text = (p.MaintenanceEnabled ? "短维护已融入身体休息提醒。" : "可手动开始；在维护偏好中开启自动安排。") + " 按钮时长包含准备。";
         MovementAction.Content = p.MaintenanceEnabled && plan.Count > 0 ? "现在做一段短维护" : p.UseFreeRest(BreakKind.Movement) ? "现在自由休息 3 分钟" : "现在活动 3 分钟";
         MaintenanceAreas.ItemsSource = new[] { BodyArea.Thoracic, BodyArea.Shoulders, BodyArea.Hips, BodyArea.BackLegs, BodyArea.Ankles, BodyArea.Neck }
@@ -119,6 +120,17 @@ public partial class DashboardWindow : Window
     private void Maintenance_Click(object sender, RoutedEventArgs e) => _app.ShowMaintenance();
     private void MaintenanceSettings_Click(object sender, RoutedEventArgs e) => _app.ShowMaintenanceSettings();
     private void ShortMaintenance_Click(object sender, RoutedEventArgs e) => _app.StartMaintenance(false);
+    private void RefreshShoulderRoutine()
+    {
+        if (_app is null || ShoulderRoutineButton is null || ShoulderRoutineNote is null) return;
+        var plan = MaintenancePlanner.ShoulderNeck(_app.State.Preferences, ShoulderBand.IsChecked == true);
+        ShoulderRoutineButton.IsEnabled = plan.Count > 0;
+        ShoulderRoutineButton.Content = plan.Count > 0 ? "预览肩颈维护 · " + TimeSpan.FromSeconds(plan.Sum(s => s.TotalSeconds)).ToString(@"mm\:ss") : "暂无可用动作";
+        ShoulderRoutineNote.Text = $"本次 {plan.Select(s => s.Exercise.Id).Distinct().Count()} 种动作 · 时长含准备。已按器材、颈部开关和维护偏好调整；确认后计入今日维护。";
+    }
+    private void ShoulderBand_Changed(object sender, RoutedEventArgs e) => RefreshShoulderRoutine();
+    private void ShoulderRoutine_Click(object sender, RoutedEventArgs e) =>
+        _app.StartMaintenance(true, shoulderNeck: true, hasBand: ShoulderBand.IsChecked == true);
     private void FullMaintenance_Click(object sender, RoutedEventArgs e) => _app.StartMaintenance(true);
     private void Office_Click(object sender, RoutedEventArgs e) => _app.StartBreak(BreakKind.Office);
     private void Pause_Click(object sender, RoutedEventArgs e) => _app.TogglePause();

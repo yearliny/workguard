@@ -77,7 +77,7 @@ public sealed class MovementIllustration : FrameworkElement
         dc.PushTransform(new ScaleTransform(side == 2 ? -1 : 1, 1));
         var demo = _exercise!.Demo;
         var standing = _exercise.Standing;
-        if (demo is MovementDemo.Reach or MovementDemo.OpenChest or MovementDemo.HipExtension or MovementDemo.Hamstring or MovementDemo.Ankle or MovementDemo.SitStand or MovementDemo.Calf)
+        if (demo is MovementDemo.Retraction or MovementDemo.Reach or MovementDemo.OpenChest or MovementDemo.HipExtension or MovementDemo.Hamstring or MovementDemo.Ankle or MovementDemo.SitStand or MovementDemo.Calf)
         {
             SideFigure(dc, demo, standing, t); dc.Pop(); dc.Pop(); dc.Pop(); return;
         }
@@ -85,8 +85,8 @@ public sealed class MovementIllustration : FrameworkElement
         var ankleRise = demo == MovementDemo.Calf ? 10 * t : 0;
         var hipY = (standing ? 195 : 195) - rise - ankleRise;
         var lean = demo == MovementDemo.Hamstring ? 12 * t : demo == MovementDemo.OpenChest ? -4 * t : 0;
-        var shoulderY = hipY - 75;
-        var head = new Point(lean, shoulderY - 39 + (demo == MovementDemo.Nod ? 4 * t : 0));
+        var shoulderY = hipY - 75 - (demo == MovementDemo.Shrug ? 7 * t : 0);
+        var head = new Point(lean, hipY - 114 + (demo == MovementDemo.Nod ? 4 * t : 0));
         dc.DrawEllipse(Brush("#DCE3D5"), null, new Point(0, 285), 76, 8);
         if (!standing || demo == MovementDemo.SitStand)
         {
@@ -94,7 +94,7 @@ public sealed class MovementIllustration : FrameworkElement
             Limb(dc, Line, 5, new(-32, 214), new(-32, 282));
             Limb(dc, Line, 5, new(32, 214), new(32, 282));
         }
-        if (standing && demo != MovementDemo.SitStand)
+        if (standing && demo != MovementDemo.SitStand && demo != MovementDemo.WallSlide)
         {
             Limb(dc, Line, 5, new(62, 143), new(88, 143));
             Limb(dc, Line, 5, new(81, 143), new(81, 282));
@@ -127,14 +127,31 @@ public sealed class MovementIllustration : FrameworkElement
         dc.DrawEllipse(Skin, null, head, 19, 24);
         dc.DrawGeometry(Hair, null, Geometry.Parse(FormattableString.Invariant($"M {head.X-19},{head.Y-4} Q {head.X-26},{head.Y-29} {head.X},{head.Y-27} Q {head.X+24},{head.Y-27} {head.X+19},{head.Y-4} Q {head.X+9},{head.Y-15} {head.X-19},{head.Y-4}")));
         var look = demo is MovementDemo.NeckTurn or MovementDemo.Rotate ? 10 * t : 0;
-        dc.DrawEllipse(Hair, null, new Point(head.X - 6 + look, head.Y + 1), 1.5, 1.5);
-        dc.DrawEllipse(Hair, null, new Point(head.X + 6 + look, head.Y + 1), 1.5, 1.5);
+        if (demo != MovementDemo.WallSlide)
+        {
+            dc.DrawEllipse(Hair, null, new Point(head.X - 6 + look, head.Y + 1), 1.5, 1.5);
+            dc.DrawEllipse(Hair, null, new Point(head.X + 6 + look, head.Y + 1), 1.5, 1.5);
+        }
         var leftHand = new Point(-30, hipY - 3); var rightHand = new Point(32, hipY - 3);
         var leftElbow = new Point(-38 + lean, shoulderY + 40); var rightElbow = new Point(38 + lean, shoulderY + 40);
         if (demo == MovementDemo.Reach) { leftHand = new(-18 - 11 * t, shoulderY + 15 - 8 * t); rightHand = new(18 + 11 * t, shoulderY + 15 - 8 * t); leftElbow = new(-42 - 7 * t, shoulderY + 24); rightElbow = new(42 + 7 * t, shoulderY + 24); }
         if (demo == MovementDemo.Rotate) { leftHand = new(18 - 12 * t, shoulderY + 9); rightHand = new(-18 - 12 * t, shoulderY + 9); leftElbow = new(-35, shoulderY + 30); rightElbow = new(32 - 10 * t, shoulderY + 30); }
         if (demo == MovementDemo.Shoulders) { leftElbow.X += 9 * t; rightElbow.X -= 9 * t; leftHand.X += 6 * t; rightHand.X -= 6 * t; }
-        if (standing && demo != MovementDemo.SitStand) { rightElbow = new(47, shoulderY + 28); rightHand = new(71, 138); }
+        if (demo == MovementDemo.WallSlide)
+        {
+            // Back view: forearms slide up the wall; both arms remain visible.
+            Limb(dc, Line, 3, new(-100, 30), new(-100, 280));
+            Limb(dc, Line, 3, new(100, 30), new(100, 280));
+            leftElbow = new(-55, shoulderY + 15 - 35 * t); rightElbow = new(55, shoulderY + 15 - 35 * t);
+            leftHand = new(-55, shoulderY - 20 - 35 * t); rightHand = new(55, shoulderY - 20 - 35 * t);
+        }
+        if (demo == MovementDemo.PullApart)
+        {
+            leftHand = new(-25 - 65 * t, shoulderY + 18); rightHand = new(25 + 65 * t, shoulderY + 18);
+            leftElbow = new(-35 - 24 * t, shoulderY + 20); rightElbow = new(35 + 24 * t, shoulderY + 20);
+            Limb(dc, Brush("#BF9465"), 4, leftHand, rightHand);
+        }
+        if (standing && demo != MovementDemo.SitStand && demo != MovementDemo.WallSlide) { rightElbow = new(47, shoulderY + 28); rightHand = new(71, 138); }
         Limb(dc, Skin, 12, new(-shoulderWidth + lean, shoulderY + 3), leftElbow, leftHand);
         Limb(dc, Skin, 12, new(shoulderWidth + lean, shoulderY + 3), rightElbow, rightHand);
         if (demo == MovementDemo.OpenChest)
@@ -149,7 +166,7 @@ public sealed class MovementIllustration : FrameworkElement
         var hip = new Point(sitStand ? 26 * t : 0, (standing && !sitStand ? 195 : 211) - rise - heelLift);
         var lean = demo == MovementDemo.Hamstring ? 20 * t : demo == MovementDemo.OpenChest ? -6 * t : sitStand ? 10 * Math.Sin(t * Math.PI) : 0;
         var shoulder = new Point(hip.X + lean, hip.Y - 76);
-        var head = new Point(shoulder.X + lean * .2, shoulder.Y - 36);
+        var head = new Point(shoulder.X + lean * .2 + (demo == MovementDemo.Retraction ? 8 * (1 - t) : 0), shoulder.Y - 36);
         dc.DrawEllipse(Brush("#DCE3D5"), null, new Point(12, 285), 80, 8);
         if (!standing || sitStand)
         {

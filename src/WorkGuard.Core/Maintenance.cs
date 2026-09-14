@@ -2,12 +2,12 @@ namespace WorkGuard.Core;
 
 [Flags]
 public enum BodyArea { None = 0, Thoracic = 1, Shoulders = 2, Hips = 4, BackLegs = 8, Ankles = 16, Neck = 32, All = 63 }
-public enum MovementDemo { Rotate, OpenChest, Reach, Shoulders, March, HipExtension, Hamstring, SitStand, Ankle, Calf, NeckTurn, Nod }
+public enum MovementDemo { Rotate, OpenChest, Reach, Shoulders, March, HipExtension, Hamstring, SitStand, Ankle, Calf, NeckTurn, Nod, WallSlide, PullApart, Retraction, Shrug }
 
 public sealed record MaintenanceExercise(string Id, string Title, BodyArea Area, string Setup,
-    string Cue, MovementDemo Demo, bool Standing = false, bool Bilateral = false)
+    string Cue, MovementDemo Demo, bool Standing = false, bool Bilateral = false, bool RoutineOnly = false)
 {
-    public const int ContentVersion = 1;
+    public const int ContentVersion = 2;
 }
 
 public static class MaintenanceCatalog
@@ -26,14 +26,19 @@ public static class MaintenanceCatalog
         new("ankle-pump", "脚踝轻轻活动", BodyArea.Ankles, "坐稳，一脚稍向前，腿部保持舒适支撑。", "脚尖缓慢向前，再轻轻勾回。幅度舒服就好。", MovementDemo.Ankle, Bilateral: true),
         new("calf-raise", "扶稳抬起脚跟", BodyArea.Ankles, "站在牢固桌面旁，双手扶稳。", "缓慢抬起脚跟，再轻轻放下。保持平衡，不必踮到最高。", MovementDemo.Calf, Standing: true),
         new("neck-turn", "舒适范围内转头", BodyArea.Neck, "坐稳，肩膀放松，目光平视。", "缓慢转向一侧，再回正。不绕颈，不用手压头。出现不适立即停止。", MovementDemo.NeckTurn, Bilateral: true),
-        new("neck-nod", "轻轻点头，再回正", BodyArea.Neck, "坐稳，让头部处于自然位置。", "做很小幅度的点头，再回到自然位置。不用力后压头部。", MovementDemo.Nod)
+        new("neck-nod", "轻轻点头，再回正", BodyArea.Neck, "坐稳，让头部处于自然位置。", "做很小幅度的点头，再回到自然位置。不用力后压头部。", MovementDemo.Nod),
+        new("thoracic-extension", "胸椎伸展", BodyArea.Thoracic, "坐稳，椅背支撑上背，双臂轻抱胸。", "上背轻轻向椅背伸展再回正，约 60 秒。颈部保持自然，不仰头、不用腰部顶出。", MovementDemo.OpenChest, RoutineOnly: true),
+        new("wall-slide", "靠墙滑臂 · Wall Slide", BodyArea.Shoulders, "面向墙站稳，前臂轻贴墙；先放松，再准备滑动。", "前臂缓慢向上滑，再回来，每组 8～12 次。只到舒适高度，不塌腰，不强压肩膀向下。", MovementDemo.WallSlide, Standing: true, RoutineOnly: true),
+        new("band-pull-apart", "轻弹力带拉开 · Pull Apart", BodyArea.Shoulders, "坐稳，检查轻弹力带完好，双手握住，置于胸前舒适高度。", "缓慢向两侧拉开，再控制回程，每组 12～20 次。不憋气，不用力夹紧肩胛；用轻阻力。", MovementDemo.PullApart, RoutineOnly: true),
+        new("neck-retraction", "颈部回正", BodyArea.Neck, "坐稳，目光平视，肩膀放松。", "头部轻微向后平移，不低头、不仰头、不用手推。保持 5～8 秒再放松，共 5 次；不适立即停止。", MovementDemo.Retraction, RoutineOnly: true),
+        new("shoulder-shrug", "轻耸肩，再完全放松", BodyArea.Shoulders, "坐稳，双臂自然下垂，不加负重。", "非常轻松地耸肩，再让肩膀自然落下，共 10 次。不追求高度，不用力向下压；平时也不用刻意沉肩。", MovementDemo.Shrug, RoutineOnly: true)
     });
     public static string Label(BodyArea area) => area switch
     {
         BodyArea.Thoracic => "胸椎", BodyArea.Shoulders => "肩胛", BodyArea.Hips => "髋部",
         BodyArea.BackLegs => "腿后侧", BodyArea.Ankles => "踝与小腿", BodyArea.Neck => "颈部", _ => "身体"
     };
-    public static IReadOnlyList<MaintenanceExercise> Allowed(Preferences p) => All.Where(e =>
+    public static IReadOnlyList<MaintenanceExercise> Allowed(Preferences p) => All.Where(e => !e.RoutineOnly &&
         (p.MaintenanceExcludedAreas & e.Area) == 0 && (e.Area != BodyArea.Neck || p.NeckMovements) &&
         (!e.Standing || p.MaintenanceStanding) && !p.MaintenanceBlockedExercises.Contains(e.Id)).ToArray();
 }
@@ -46,6 +51,31 @@ public sealed record MaintenanceStep(MaintenanceExercise Exercise, int Seconds)
 
 public static class MaintenancePlanner
 {
+    // An explicit, manual routine: never truncate it to the daily remaining budget.
+    // Timed windows guide self-paced repetitions; they do not measure repetitions.
+    public static IReadOnlyList<MaintenanceStep> ShoulderNeck(Preferences preferences, bool hasBand)
+    {
+        var p = preferences.Validate();
+        var steps = new List<MaintenanceStep>();
+        void Add(string id, int seconds, int set = 0)
+        {
+            var e = MaintenanceCatalog.All.Single(x => x.Id == id);
+            if ((p.MaintenanceExcludedAreas & e.Area) != 0 ||
+                (e.Area == BodyArea.Neck && !p.NeckMovements) ||
+                (e.Standing && !p.MaintenanceStanding) || p.MaintenanceBlockedExercises.Contains(id)) return;
+            if (set > 0) e = e with { Title = e.Title + $" · 第 {set}/2 组" };
+            if (id == "thoracic-turn") e = e with { Cue = e.Cue + " 每侧 8～10 次，按自己的节奏，不赶次数。" };
+            steps.Add(new(e, seconds));
+        }
+        Add("thoracic-turn", 60);
+        Add("thoracic-extension", 60);
+        Add("wall-slide", 60, 1); Add("wall-slide", 60, 2);
+        if (hasBand) { Add("band-pull-apart", 60, 1); Add("band-pull-apart", 60, 2); }
+        Add("neck-retraction", 50);
+        Add("shoulder-shrug", 40);
+        return steps;
+    }
+
     // Dates and recorded coverage are supplied by the caller; no clock or platform dependencies.
     // Duration is actual practice time. Preparation is separately included in the displayed estimate.
     public static IReadOnlyList<MaintenanceStep> Build(Preferences preferences,
